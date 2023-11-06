@@ -1,8 +1,8 @@
 ## Redis lib
 
-- 作为客户端，与`Redis Server`通信
-- 解析`RDB`
-- 作为`Replica`，从`Master`同步数据
+- 作为客户端，与 Redis Server 通信
+- 解析 RDB
+- 作为 Replica，从 Master 同步数据
 
 ### 客户端
 
