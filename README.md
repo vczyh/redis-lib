@@ -17,12 +17,12 @@ if err != nil {
     // error
 }  
   
-if err := c.Auth(); err != nil { 
-	// error
+if err := c.Auth(); err != nil {  
+    // error
 }  
   
 if err = c.Ping(); err != nil {  
-    // error
+    // errror
 }
 ```  
 
