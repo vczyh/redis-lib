@@ -3,8 +3,8 @@ package connection
 import (
 	"bufio"
 	"fmt"
+	"github.com/vczyh/redis-lib/resp"
 	"net"
-	"redis-lib/resp"
 )
 
 type Conn struct {

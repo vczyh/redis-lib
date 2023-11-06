@@ -2,8 +2,8 @@ package client
 
 import (
 	"fmt"
+	"github.com/vczyh/redis-lib/connection"
 	"net"
-	"redis-lib/connection"
 	"strconv"
 )
 

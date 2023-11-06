@@ -1,9 +1,9 @@
 package replica
 
 import (
+	"github.com/vczyh/redis-lib/rdb"
 	"io"
 	"os"
-	"redis-lib/rdb"
 	"testing"
 )
 

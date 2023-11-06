@@ -2,9 +2,9 @@ package replica
 
 import (
 	"fmt"
+	"github.com/vczyh/redis-lib/client"
+	"github.com/vczyh/redis-lib/resp"
 	"io"
-	"redis-lib/client"
-	"redis-lib/resp"
 	"strconv"
 	"strings"
 	"sync/atomic"
