@@ -7,51 +7,52 @@
 ### 客户端
 
 ```go  
-c, err := NewClient(&Config{  
+c, err := client.NewClient(&client.Config{  
     Host:     "127.0.0.1",  
     Port:     26379,  
     Username: "",  
     Password: "123",  
 })  
 if err != nil {  
-    // error
+    panic(err)  
 }  
   
 if err := c.Auth(); err != nil {  
-    // error
+    panic(err)  
 }  
   
 if err = c.Ping(); err != nil {  
-    // errror
+    panic(err)  
 }
 ```  
 
 ### 解析 RDB
 
 ```go  
-p, err := NewParser("/tmp/test.rdb")  
-if err != nil {   
-    // error  
+p, err := rdb.NewParser("/tmp/rdb_test.rdb")  
+if err != nil {  
+    panic(err)  
 }  
   
 s, err := p.Parse()  
 if err != nil {  
-    // error}  
+    panic(err)  
+}  
   
 for s.HasNext() {  
-    e := s.Next()    
-    e.Debug()
+    e := s.Next()  
+    e.Debug()  
 }  
   
-if err := s.Err(); err != nil {   
-    // error  
-}  
+if err := s.Err(); err != nil {  
+    panic(err)  
+}
 ```  
 
 ### 同步数据
 
 ```go  
-r, err := NewReplica(&Config{  
+r, err := replica.NewReplica(&replica.Config{  
     MasterIP:            "127.0.0.1",  
     MasterPort:          26379,  
     MasterUser:          "",  
@@ -61,10 +62,11 @@ r, err := NewReplica(&Config{
     AofWriter:           os.Stdout,  
 })  
 if err != nil {  
-    // error
+    panic(err)  
 }  
+  
 if err := r.SyncWithMaster(); err != nil {  
-    // error
+    panic(err)  
 }
 ```
 
@@ -73,7 +75,7 @@ if err := r.SyncWithMaster(); err != nil {
 ```go
 rdbReader, rdbWriter := io.Pipe()  
   
-r, err := NewReplica(&Config{  
+r, err := replica.NewReplica(&replica.Config{  
     MasterIP:       "127.0.0.1",  
     MasterPort:     26379,  
     MasterUser:     "",  
@@ -82,17 +84,17 @@ r, err := NewReplica(&Config{
     AofWriter:      os.Stdout,  
 })  
 if err != nil {  
-    // error
+    panic(err)  
 }  
   
 go func() {  
     if err := parseRdb(rdbReader); err != nil {  
-       // error
+       panic(err)  
     }  
 }()  
   
 if err = r.SyncWithMaster(); err != nil {  
-    // error
+    panic(err)  
 }
 
 func parseRdb(r io.Reader) error {  
