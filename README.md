@@ -47,6 +47,23 @@ for s.HasNext() {
 if err := s.Err(); err != nil {  
     panic(err)  
 }
+
+...
+=== StringEvent ===
+Key: b
+Value: 3
+
+...
+
+=== Set ===
+Key: key:set
+Size: 4
+Members:
+        s2
+        s5
+        s4
+        s1
+...
 ```  
 
 ### 同步数据
