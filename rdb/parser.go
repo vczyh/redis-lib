@@ -9,43 +9,43 @@ import (
 )
 
 const (
-	OpCodeFunction2 = 245
-	OpcodeFunction  = 246
-	OpCodeModuleAux = 247
-	OpCodeIdle      = 248
-	OpCodeFreq      = 249
-	OpCodeAux       = 250
-	OpCodeResizeDb  = 0xFB
-	OpExpireTimeMs  = 0xFC
-	OpExpireTime    = 0xFD
-	OpCodeSelectDb  = 0xFE
-	OpCodeEOF       = 0xFF
+	opCodeFunction2 = 245
+	opcodeFunction  = 246
+	opCodeModuleAux = 247
+	opCodeIdle      = 248
+	opCodeFreq      = 249
+	opCodeAux       = 250
+	opCodeResizeDb  = 0xFB
+	opExpireTimeMs  = 0xFC
+	opExpireTime    = 0xFD
+	opCodeSelectDb  = 0xFE
+	opCodeEOF       = 0xFF
 
-	ValueTypeString           = 0
-	ValueTypeList             = 1
-	ValueTypeSet              = 2
-	ValueTypeZSet             = 3
-	ValueTypeHash             = 4
-	ValueTypeZSet2            = 5 // ZSET version 2 with doubles stored in binary.
-	ValueTypeModule           = 6
-	ValueTypeModule2          = 7 // Module value with annotations for parsing without the generating module being loaded.
-	ValueTypeHashZipMap       = 9
-	ValueTypeZipList          = 10
-	ValueTypeIntSet           = 11
-	ValueTypeZSetZipList      = 12
-	ValueTypeHashZipList      = 13
-	ValueTypeListQuickList    = 14
-	ValueTypeStreamListPacks  = 15
-	ValueTypeHashListPack     = 16
-	ValueTypeZSetListPack     = 17
-	ValueTypeListQuickList2   = 18
-	ValueTypeStreamListPacks2 = 19
+	valueTypeString           = 0
+	valueTypeList             = 1
+	valueTypeSet              = 2
+	valueTypeZSet             = 3
+	valueTypeHash             = 4
+	valueTypeZSet2            = 5 // ZSET version 2 with doubles stored in binary.
+	valueTypeModule           = 6
+	valueTypeModule2          = 7 // Module value with annotations for parsing without the generating module being loaded.
+	valueTypeHashZipMap       = 9
+	valueTypeZipList          = 10
+	valueTypeIntSet           = 11
+	valueTypeZSetZipList      = 12
+	valueTypeHashZipList      = 13
+	valueTypeListQuickList    = 14
+	valueTypeStreamListPacks  = 15
+	valueTypeHashListPack     = 16
+	valueTypeZSetListPack     = 17
+	valueTypeListQuickList2   = 18
+	valueTypeStreamListPacks2 = 19
 )
 
 type Parser struct {
 	file string
 	fd   *os.File
-	r    *Reader
+	r    *rdbReader
 
 	version int
 }
@@ -59,7 +59,7 @@ func NewParser(name string) (*Parser, error) {
 
 func NewReaderParser(r io.Reader) (*Parser, error) {
 	p := &Parser{
-		r: NewReader(r),
+		r: newRdbReader(r),
 	}
 	return p, nil
 }
@@ -71,7 +71,7 @@ func (p *Parser) Parse() (*EventStreamer, error) {
 			return nil, err
 		}
 		p.fd = f
-		r := NewReader(f)
+		r := newRdbReader(f)
 		p.r = r
 	}
 
@@ -85,10 +85,7 @@ func (p *Parser) Parse() (*EventStreamer, error) {
 		}()
 
 		if err := p.parse(eventC); err != nil {
-			eventC <- &eventWrapper{
-				e:   nil,
-				err: err,
-			}
+			eventC <- &eventWrapper{e: nil, err: err}
 		}
 	}()
 
@@ -107,9 +104,12 @@ func (p *Parser) parse(eventC chan *eventWrapper) error {
 	if err != nil {
 		return err
 	}
+	magicEvent := &MagicNumberEvent{MagicNumber: magic}
 	eventC <- &eventWrapper{
-		e:   &MagicNumberEvent{MagicNumber: magic},
-		err: nil,
+		e: &RedisRdbEvent{
+			EventType: EventTypeMagicNumber,
+			Event:     magicEvent,
+		},
 	}
 
 	// version
@@ -122,9 +122,12 @@ func (p *Parser) parse(eventC chan *eventWrapper) error {
 		return err
 	}
 	p.version = versionNumber
+	versionEvent := &VersionEvent{Version: versionNumber}
 	eventC <- &eventWrapper{
-		e:   &VersionEvent{Version: versionNumber},
-		err: nil,
+		e: &RedisRdbEvent{
+			EventType: EventTypeVersion,
+			Event:     versionEvent,
+		},
 	}
 
 	var expireTime uint64
@@ -136,40 +139,55 @@ func (p *Parser) parse(eventC chan *eventWrapper) error {
 			return err
 		}
 		switch b {
-		case OpCodeAux:
+		case opCodeAux:
 			e, err := p.parseAuxiliaryFields()
 			if err != nil {
 				return err
 			}
-			eventC <- &eventWrapper{e: e}
+			eventC <- &eventWrapper{
+				e: &RedisRdbEvent{
+					EventType: opCodeAux,
+					Event:     e,
+				},
+			}
 			continue
-		case OpCodeSelectDb:
+		case opCodeSelectDb:
 			e, err := p.parseSelectDb()
 			if err != nil {
 				return err
 			}
-			eventC <- &eventWrapper{e: e}
+			eventC <- &eventWrapper{
+				e: &RedisRdbEvent{
+					EventType: EventTypeSelectDb,
+					Event:     e,
+				},
+			}
 			continue
-		case OpCodeResizeDb:
+		case opCodeResizeDb:
 			e, err := p.parseResizeDb()
 			if err != nil {
 				return err
 			}
-			eventC <- &eventWrapper{e: e}
+			eventC <- &eventWrapper{
+				e: &RedisRdbEvent{
+					EventType: EventTypeResizeDb,
+					Event:     e,
+				},
+			}
 			continue
-		case OpExpireTime:
+		case opExpireTime:
 			expireTime, err = p.parseExpireTime()
 			if err != nil {
 				return err
 			}
 			continue
-		case OpExpireTimeMs:
+		case opExpireTimeMs:
 			expireTime, err = p.parseExpireTimeMs()
 			if err != nil {
 				return err
 			}
 			continue
-		case OpCodeEOF:
+		case opCodeEOF:
 			isEnd = true
 			continue
 		}
@@ -249,7 +267,7 @@ func (p *Parser) parseExpireTimeMs() (uint64, error) {
 	return expireAt, nil
 }
 
-func (p *Parser) parseEntryWithValueType(valueType byte, expireAt uint64) (Event, error) {
+func (p *Parser) parseEntryWithValueType(valueType byte, expireAt uint64) (*RedisRdbEvent, error) {
 	// TODO expires?
 
 	key, err := p.r.GetLengthString()
@@ -258,18 +276,42 @@ func (p *Parser) parseEntryWithValueType(valueType byte, expireAt uint64) (Event
 	}
 
 	switch valueType {
-	case ValueTypeString:
-		return parseString(key, p.r)
-	case ValueTypeList, ValueTypeZipList, ValueTypeListQuickList:
-		return parseList(key, p.r, valueType)
-	case ValueTypeSet:
-		return parseSet(key, p.r)
-	case ValueTypeZSetZipList:
-		return parseZSet(key, p.r, valueType)
-	case ValueTypeHashZipList:
-		return parseHash(key, p.r, valueType)
-	case ValueTypeStreamListPacks, ValueTypeListQuickList2:
-		return parseStream(key, p.r, valueType)
+	case valueTypeString:
+		event, err := parseString(key, p.r)
+		if err != nil {
+			return nil, err
+		}
+		return &RedisRdbEvent{EventType: EventTypeStringObject, Event: event}, nil
+	case valueTypeList, valueTypeZipList, valueTypeListQuickList:
+		event, err := parseList(key, p.r, valueType)
+		if err != nil {
+			return nil, err
+		}
+		return &RedisRdbEvent{EventType: EventTypeListObject, Event: event}, nil
+	case valueTypeSet:
+		event, err := parseSet(key, p.r)
+		if err != nil {
+			return nil, err
+		}
+		return &RedisRdbEvent{EventType: EventTypeSetObject, Event: event}, nil
+	case valueTypeZSetZipList:
+		event, err := parseZSet(key, p.r, valueType)
+		if err != nil {
+			return nil, err
+		}
+		return &RedisRdbEvent{EventType: EventTypeZSetObject, Event: event}, nil
+	case valueTypeHashZipList:
+		event, err := parseHash(key, p.r, valueType)
+		if err != nil {
+			return nil, err
+		}
+		return &RedisRdbEvent{EventType: EventTypeHashObject, Event: event}, nil
+	case valueTypeStreamListPacks, valueTypeListQuickList2:
+		event, err := parseStream(key, p.r, valueType)
+		if err != nil {
+			return nil, err
+		}
+		return &RedisRdbEvent{EventType: EventTypeStreamObject, Event: event}, nil
 	default:
 		return nil, fmt.Errorf("unsupported rdb value type: 0x%x", valueType)
 	}

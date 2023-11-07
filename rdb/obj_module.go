@@ -2,9 +2,9 @@ package rdb
 
 import "fmt"
 
-type Module struct{}
+type ModuleObjectEvent struct{}
 
-func parseModule(r *Reader, valueType byte) (*Module, error) {
+func parseModule(r *rdbReader, valueType byte) (*ModuleObjectEvent, error) {
 	// TODO
 	moduleId, err := r.GetLengthUInt64()
 	if err != nil {

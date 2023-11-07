@@ -5,7 +5,7 @@ import (
 	"strconv"
 )
 
-type ZSet struct {
+type ZSetObjectEvent struct {
 	Key     string
 	Members []ZSetMember
 }
@@ -15,8 +15,8 @@ type ZSetMember struct {
 	Score float64
 }
 
-func (e *ZSet) Debug() {
-	fmt.Printf("=== Sorted Set ===\n")
+func (e *ZSetObjectEvent) Debug() {
+	fmt.Printf("=== ZSetObjectEvent ===\n")
 	fmt.Printf("Key: %s\n", e.Key)
 	fmt.Printf("Size: %d\n", len(e.Members))
 	fmt.Printf("Members:\n")
@@ -26,17 +26,17 @@ func (e *ZSet) Debug() {
 	fmt.Printf("\n")
 }
 
-func parseZSet(key string, r *Reader, valueType byte) (*ZSet, error) {
-	zSet := &ZSet{Key: key}
+func parseZSet(key string, r *rdbReader, valueType byte) (*ZSetObjectEvent, error) {
+	zSet := &ZSetObjectEvent{Key: key}
 	switch valueType {
-	case ValueTypeZSetZipList:
+	case valueTypeZSetZipList:
 		return parseSortedSetInZipList(r, zSet)
 	default:
 		return nil, fmt.Errorf("unsupported zset value type: %x", valueType)
 	}
 }
 
-func parseSortedSetInZipList(r *Reader, set *ZSet) (*ZSet, error) {
+func parseSortedSetInZipList(r *rdbReader, set *ZSetObjectEvent) (*ZSetObjectEvent, error) {
 	list, err := parseZipList(r)
 	if err != nil {
 		return nil, err

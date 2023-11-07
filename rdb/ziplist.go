@@ -7,12 +7,12 @@ import (
 	"strconv"
 )
 
-func parseZipList(r *Reader) ([]string, error) {
+func parseZipList(r *rdbReader) ([]string, error) {
 	zipBytes, err := r.GetLengthBytes()
 	if err != nil {
 		return nil, err
 	}
-	r = NewReader(bytes.NewReader(zipBytes))
+	r = newRdbReader(bytes.NewReader(zipBytes))
 
 	_, err = r.GetLUint32()
 	if err != nil {
@@ -49,7 +49,7 @@ func parseZipList(r *Reader) ([]string, error) {
 }
 
 // ziplist.c::ZIP_DECODE_LENGTH
-func parseZipListEntry(r *Reader) (string, error) {
+func parseZipListEntry(r *rdbReader) (string, error) {
 	b, err := r.ReadByte()
 	if err != nil {
 		return "", err
@@ -71,8 +71,8 @@ func parseZipListEntry(r *Reader) (string, error) {
 
 	// String: flag < zipStrMask
 	encoding := entryFlag
-	if encoding < ZipStrMask {
-		encoding &= ZipStrMask
+	if encoding < zipStrMask {
+		encoding &= zipStrMask
 	}
 	switch encoding {
 	case zipStr06B:

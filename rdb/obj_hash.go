@@ -2,7 +2,7 @@ package rdb
 
 import "fmt"
 
-type Hash struct {
+type HashObjectEvent struct {
 	Key    string
 	Fields []HashField
 }
@@ -12,8 +12,8 @@ type HashField struct {
 	Value string
 }
 
-func (e *Hash) Debug() {
-	fmt.Printf("=== Hash ===\n")
+func (e *HashObjectEvent) Debug() {
+	fmt.Printf("=== HashObjectEvent ===\n")
 	fmt.Printf("Key: %s\n", e.Key)
 	fmt.Printf("Size: %d\n", len(e.Fields))
 	fmt.Printf("Fields:\n")
@@ -24,17 +24,17 @@ func (e *Hash) Debug() {
 	fmt.Printf("\n")
 }
 
-func parseHash(key string, r *Reader, valueType byte) (*Hash, error) {
-	h := &Hash{Key: key}
+func parseHash(key string, r *rdbReader, valueType byte) (*HashObjectEvent, error) {
+	h := &HashObjectEvent{Key: key}
 	switch valueType {
-	case ValueTypeHashZipList:
+	case valueTypeHashZipList:
 		return parseHashInZipList(r, h)
 	default:
 		return nil, fmt.Errorf("unsupported hash value type: %x", valueType)
 	}
 }
 
-func parseHashInZipList(r *Reader, h *Hash) (*Hash, error) {
+func parseHashInZipList(r *rdbReader, h *HashObjectEvent) (*HashObjectEvent, error) {
 	list, err := parseZipList(r)
 	if err != nil {
 		return nil, err

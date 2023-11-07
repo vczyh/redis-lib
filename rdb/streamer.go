@@ -2,12 +2,12 @@ package rdb
 
 type EventStreamer struct {
 	c   chan *eventWrapper
-	o   Event
+	o   *RedisRdbEvent
 	err error
 }
 
 type eventWrapper struct {
-	e   Event
+	e   *RedisRdbEvent
 	err error
 }
 
@@ -32,7 +32,7 @@ func (s *EventStreamer) HasNext() bool {
 	return true
 }
 
-func (s *EventStreamer) Next() Event {
+func (s *EventStreamer) Next() *RedisRdbEvent {
 	return s.o
 }
 

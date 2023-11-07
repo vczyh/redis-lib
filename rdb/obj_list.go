@@ -5,7 +5,7 @@ import (
 )
 
 const (
-	ZipStrMask = 0xc0
+	zipStrMask = 0xc0
 	zipStr06B  = 0 << 6
 	zipStr14B  = 1 << 6
 	zipStr32B  = 2 << 6
@@ -21,13 +21,13 @@ const (
 	zipIntImmMax  = 0xfd
 )
 
-type List struct {
+type ListObjectEvent struct {
 	Key     string
 	Members []string
 }
 
-func (e *List) Debug() {
-	fmt.Printf("=== List ===\n")
+func (e *ListObjectEvent) Debug() {
+	fmt.Printf("=== ListObjectEvent ===\n")
 	fmt.Printf("Key: %s\n", e.Key)
 	fmt.Printf("Size: %d\n", len(e.Members))
 	fmt.Printf("Members:\n")
@@ -37,25 +37,25 @@ func (e *List) Debug() {
 	fmt.Printf("\n")
 }
 
-func parseList(key string, r *Reader, valueType byte) (*List, error) {
-	list := &List{
+func parseList(key string, r *rdbReader, valueType byte) (*ListObjectEvent, error) {
+	list := &ListObjectEvent{
 		Key: key,
 	}
 	switch valueType {
-	case ValueTypeList:
+	case valueTypeList:
 		// TODO not tested
 		return parseList0(r, list)
-	case ValueTypeZipList:
+	case valueTypeZipList:
 		// TODO not tested
 		return parseListInZipList(r, list)
-	case ValueTypeListQuickList:
+	case valueTypeListQuickList:
 		return parseListInQuickList(r, list)
 	default:
 		return nil, fmt.Errorf("unsupported list value type: %x", valueType)
 	}
 }
 
-func parseList0(r *Reader, list *List) (*List, error) {
+func parseList0(r *rdbReader, list *ListObjectEvent) (*ListObjectEvent, error) {
 	size, err := r.GetLengthInt()
 	if err != nil {
 		return nil, err
@@ -72,7 +72,7 @@ func parseList0(r *Reader, list *List) (*List, error) {
 	return list, nil
 }
 
-func parseListInZipList(r *Reader, list *List) (*List, error) {
+func parseListInZipList(r *rdbReader, list *ListObjectEvent) (*ListObjectEvent, error) {
 	zipList, err := parseZipList(r)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func parseListInZipList(r *Reader, list *List) (*List, error) {
 	return list, nil
 }
 
-func parseListInQuickList(r *Reader, list *List) (*List, error) {
+func parseListInQuickList(r *rdbReader, list *ListObjectEvent) (*ListObjectEvent, error) {
 	size, err := r.GetLengthInt()
 	if err != nil {
 		return nil, err

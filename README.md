@@ -1,8 +1,8 @@
 ## Redis lib
 
-- 作为客户端，与 Redis Server 通信
-- 解析 RDB
-- 作为 Replica，从 Master 同步数据
+- 作为客户端，与`Redis Server`通信
+- 解析`RDB`
+- 作为`Replica`，从`Master`同步数据
 
 ### 客户端
 
@@ -41,21 +41,29 @@ if err != nil {
   
 for s.HasNext() {  
     e := s.Next()  
-    e.Debug()  
+  
+    switch e.EventType {  
+    case rdb.EventTypeVersion:  
+       e.Event.Debug()  
+    case rdb.EventTypeStringObject:  
+       e.Event.Debug()  
+    case rdb.EventTypeSetObject:  
+       e.Event.Debug()  
+    }  
 }  
   
 if err := s.Err(); err != nil {  
     panic(err)  
 }
 
-...
-=== StringEvent ===
+=== VersionEvent ===
+9
+
+=== StringObjectEvent ===
 Key: b
 Value: 3
 
-...
-
-=== Set ===
+=== SetObjectEvent ===
 Key: key:set
 Size: 4
 Members:
@@ -63,6 +71,7 @@ Members:
         s5
         s4
         s1
+        
 ...
 ```  
 
@@ -125,7 +134,7 @@ func parseRdb(r io.Reader) error {
     }  
     for s.HasNext() {  
        e := s.Next()  
-       e.Debug()  
+       e.Event.Debug()  
     }  
     return s.Err()  
 }

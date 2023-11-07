@@ -2,24 +2,24 @@ package rdb
 
 import "fmt"
 
-type StringEvent struct {
+type StringObjectEvent struct {
 	Key   string
 	Value string
 }
 
-func parseString(key string, r *Reader) (*StringEvent, error) {
+func parseString(key string, r *rdbReader) (*StringObjectEvent, error) {
 	value, err := r.GetLengthString()
 	if err != nil {
 		return nil, err
 	}
-	return &StringEvent{
+	return &StringObjectEvent{
 		Key:   key,
 		Value: value,
 	}, nil
 }
 
-func (e *StringEvent) Debug() {
-	fmt.Printf("=== StringEvent ===\n")
+func (e *StringObjectEvent) Debug() {
+	fmt.Printf("=== StringObjectEvent ===\n")
 	fmt.Printf("Key: %s\n", e.Key)
 	fmt.Printf("Value: %s\n", e.Value)
 	fmt.Printf("\n")

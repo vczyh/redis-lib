@@ -7,35 +7,35 @@ import (
 )
 
 const (
-	LPEncoding7BitUint     = 0
-	LPEncoding7BitUintMask = 0x80
+	lpEncoding7BitUint     = 0
+	lpEncoding7BitUintMask = 0x80
 
-	LPEncoding6BitStr     = 0x80
-	LPEncoding6BitStrMask = 0xC0
+	lpEncoding6BitStr     = 0x80
+	lpEncoding6BitStrMask = 0xC0
 
-	LPEncoding13BitInt     = 0xC0
-	LPEncoding13BitIntMask = 0xE0
+	lpEncoding13BitInt     = 0xC0
+	lpEncoding13BitIntMask = 0xE0
 
-	LPEncoding12BitStr     = 0xE0
-	LPEncoding12BitStrMask = 0xF0
+	lpEncoding12BitStr     = 0xE0
+	lpEncoding12BitStrMask = 0xF0
 
-	LPEncoding16BitInt     = 0xF1
-	LPEncoding16BitIntMask = 0xFF
+	lpEncoding16BitInt     = 0xF1
+	lpEncoding16BitIntMask = 0xFF
 
-	LPEncoding24BitInt     = 0xF2
-	LPEncoding24BitIntMask = 0xFF
+	lpEncoding24BitInt     = 0xF2
+	lpEncoding24BitIntMask = 0xFF
 
-	LPEncoding32BitInt     = 0xF3
-	LPEncoding32BitIntMask = 0xFF
+	lpEncoding32BitInt     = 0xF3
+	lpEncoding32BitIntMask = 0xFF
 
-	LPEncoding64BitInt     = 0xF4
-	LPEncoding64BitIntMask = 0xFF
+	lpEncoding64BitInt     = 0xF4
+	lpEncoding64BitIntMask = 0xFF
 
-	LPEncoding32BitStr     = 0xF0
-	LPEncoding32BitStrMask = 0xFF
+	lpEncoding32BitStr     = 0xF0
+	lpEncoding32BitStrMask = 0xFF
 )
 
-func parseListPack(r *Reader) ([]string, error) {
+func parseListPack(r *rdbReader) ([]string, error) {
 	// Total length
 	_, err := r.GetLUint32()
 	if err != nil {
@@ -65,7 +65,7 @@ func parseListPack(r *Reader) ([]string, error) {
 	return members, nil
 }
 
-func parseListPackEntry(r *Reader) (string, error) {
+func parseListPackEntry(r *rdbReader) (string, error) {
 	encoding, err := r.ReadByte()
 	if err != nil {
 		return "", err
@@ -75,7 +75,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 	var uVal, negStart, negMax uint64
 
 	switch {
-	case encoding&LPEncoding7BitUintMask == LPEncoding7BitUint:
+	case encoding&lpEncoding7BitUintMask == lpEncoding7BitUint:
 		negStart = math.MaxUint64
 		negMax = 0
 		uVal = uint64(encoding & 0x7f)
@@ -83,7 +83,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 		if _, err := r.ReadFixedBytes(1); err != nil {
 			return "", err
 		}
-	case encoding&LPEncoding6BitStrMask == LPEncoding6BitStr:
+	case encoding&lpEncoding6BitStrMask == lpEncoding6BitStr:
 		count := int(encoding & 0x3f)
 		s, err := r.ReadFixedString(count)
 		if err != nil {
@@ -93,7 +93,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 			return "", err
 		}
 		return s, nil
-	case encoding&LPEncoding13BitIntMask == LPEncoding13BitInt:
+	case encoding&lpEncoding13BitIntMask == lpEncoding13BitInt:
 		b2, err := r.ReadByte()
 		if err != nil {
 			return "", err
@@ -104,7 +104,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 		if _, err := r.ReadFixedBytes(1); err != nil {
 			return "", err
 		}
-	case encoding&LPEncoding16BitIntMask == LPEncoding16BitInt:
+	case encoding&lpEncoding16BitIntMask == lpEncoding16BitInt:
 		lUint16, err := r.GetLUint16()
 		if err != nil {
 			return "", err
@@ -115,7 +115,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 		if _, err := r.ReadFixedBytes(1); err != nil {
 			return "", err
 		}
-	case encoding&LPEncoding24BitIntMask == LPEncoding24BitInt:
+	case encoding&lpEncoding24BitIntMask == lpEncoding24BitInt:
 		lUint24, err := r.GetLUint24()
 		if err != nil {
 			return "", err
@@ -126,7 +126,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 		if _, err := r.ReadFixedBytes(1); err != nil {
 			return "", err
 		}
-	case encoding&LPEncoding32BitIntMask == LPEncoding32BitInt:
+	case encoding&lpEncoding32BitIntMask == lpEncoding32BitInt:
 		lUint32, err := r.GetLUint32()
 		if err != nil {
 			return "", err
@@ -137,7 +137,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 		if _, err := r.ReadFixedBytes(1); err != nil {
 			return "", err
 		}
-	case encoding&LPEncoding64BitIntMask == LPEncoding64BitInt:
+	case encoding&lpEncoding64BitIntMask == lpEncoding64BitInt:
 		uVal, err = r.GetLUint64()
 		if err != nil {
 			return "", err
@@ -147,7 +147,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 		if _, err := r.ReadFixedBytes(1); err != nil {
 			return "", err
 		}
-	case encoding&LPEncoding12BitStrMask == LPEncoding12BitStr:
+	case encoding&lpEncoding12BitStrMask == lpEncoding12BitStr:
 		b2, err := r.ReadByte()
 		if err != nil {
 			return "", err
@@ -161,7 +161,7 @@ func parseListPackEntry(r *Reader) (string, error) {
 			return "", err
 		}
 		return s, nil
-	case encoding&LPEncoding32BitStrMask == LPEncoding32BitStr:
+	case encoding&lpEncoding32BitStrMask == lpEncoding32BitStr:
 		count, err := r.GetLUint32()
 		if err != nil {
 			return "", err

@@ -4,13 +4,13 @@ import (
 	"fmt"
 )
 
-type Set struct {
+type SetObjectEvent struct {
 	Key     string
 	Members []string
 }
 
-func (e *Set) Debug() {
-	fmt.Printf("=== Set ===\n")
+func (e *SetObjectEvent) Debug() {
+	fmt.Printf("=== SetObjectEvent ===\n")
 	fmt.Printf("Key: %s\n", e.Key)
 	fmt.Printf("Size: %d\n", len(e.Members))
 	fmt.Printf("Members:\n")
@@ -20,7 +20,7 @@ func (e *Set) Debug() {
 	fmt.Printf("\n")
 }
 
-func parseSet(key string, r *Reader) (*Set, error) {
+func parseSet(key string, r *rdbReader) (*SetObjectEvent, error) {
 	size, err := r.GetLengthInt()
 	if err != nil {
 		return nil, err
@@ -33,5 +33,5 @@ func parseSet(key string, r *Reader) (*Set, error) {
 		}
 		members[i] = item
 	}
-	return &Set{Key: key, Members: members}, nil
+	return &SetObjectEvent{Key: key, Members: members}, nil
 }

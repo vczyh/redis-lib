@@ -2,6 +2,27 @@ package rdb
 
 import "fmt"
 
+type EventType uint8
+
+const (
+	EventTypeMagicNumber EventType = iota
+	EventTypeVersion
+	EventTypeAuxField
+	EventTypeSelectDb
+	EventTypeResizeDb
+	EventTypeStringObject
+	EventTypeListObject
+	EventTypeSetObject
+	EventTypeZSetObject
+	EventTypeHashObject
+	EventTypeStreamObject
+)
+
+type RedisRdbEvent struct {
+	EventType EventType
+	Event     Event
+}
+
 type Event interface {
 	Debug()
 }

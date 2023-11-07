@@ -9,18 +9,18 @@ import (
 )
 
 const (
-	StreamItemFlagDeleted    = 1 << 0
-	StreamItemFlagSameFields = 1 << 1
+	streamItemFlagDeleted    = 1 << 0
+	streamItemFlagSameFields = 1 << 1
 )
 
-type Stream struct {
+type StreamObjectEvent struct {
 	Key     string
 	Entries []*StreamEntry
 	Groups  []*StreamConsumerGroup
 }
 
-func (e *Stream) Debug() {
-	fmt.Printf("=== Stream ===\n")
+func (e *StreamObjectEvent) Debug() {
+	fmt.Printf("=== StreamObjectEvent ===\n")
 	fmt.Printf("Key: %s\n", e.Key)
 
 	fmt.Printf("Entry size: %d\n", len(e.Entries))
@@ -58,10 +58,10 @@ type StreamConsumerGroup struct {
 	LastId StreamId
 
 	PEL       []*StreamNAck
-	Consumers []*Consumer
+	Consumers []*StreamConsumer
 }
 
-type Consumer struct {
+type StreamConsumer struct {
 	// Last time this consumer was active.
 	SeenTime uint64
 
@@ -82,7 +82,7 @@ type StreamNAck struct {
 	DeliveryCount uint64
 
 	// The consumer this message was delivered to in the last delivery.
-	Consumer *Consumer
+	Consumer *StreamConsumer
 }
 
 type StreamId struct {
@@ -90,10 +90,10 @@ type StreamId struct {
 	Seq uint64
 }
 
-func parseStream(key string, r *Reader, valueType byte) (*Stream, error) {
-	stream := &Stream{Key: key}
+func parseStream(key string, r *rdbReader, valueType byte) (*StreamObjectEvent, error) {
+	stream := &StreamObjectEvent{Key: key}
 	switch valueType {
-	case ValueTypeStreamListPacks, ValueTypeListQuickList2:
+	case valueTypeStreamListPacks, valueTypeListQuickList2:
 		return parseStream0(r, valueType, stream)
 	default:
 		return nil, fmt.Errorf("unsupported stream rdb type: 0x%x", valueType)
@@ -101,7 +101,7 @@ func parseStream(key string, r *Reader, valueType byte) (*Stream, error) {
 }
 
 // t_stream.c::streamAppendItem
-func parseStream0(r *Reader, valueType byte, stream *Stream) (*Stream, error) {
+func parseStream0(r *rdbReader, valueType byte, stream *StreamObjectEvent) (*StreamObjectEvent, error) {
 	listPackSize, err := r.GetLengthInt()
 	if err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func parseStream0(r *Reader, valueType byte, stream *Stream) (*Stream, error) {
 		if err != nil {
 			return nil, err
 		}
-		members, err := parseListPack(NewReader(bytes.NewReader(listPackBytes)))
+		members, err := parseListPack(newRdbReader(bytes.NewReader(listPackBytes)))
 		if err != nil {
 			return nil, err
 		}
@@ -199,7 +199,7 @@ func parseStream0(r *Reader, valueType byte, stream *Stream) (*Stream, error) {
 				},
 			}
 
-			if flags&StreamItemFlagSameFields == 0 {
+			if flags&streamItemFlagSameFields == 0 {
 				nFields, err := strconv.ParseInt(members[mIndex], 10, 64)
 				if err != nil {
 					return nil, err
@@ -225,7 +225,7 @@ func parseStream0(r *Reader, valueType byte, stream *Stream) (*Stream, error) {
 			_ = members[mIndex]
 			mIndex++
 
-			if flags&StreamItemFlagDeleted == 0 {
+			if flags&streamItemFlagDeleted == 0 {
 				stream.Entries = append(stream.Entries, entry)
 			}
 		}
@@ -252,7 +252,7 @@ func parseStream0(r *Reader, valueType byte, stream *Stream) (*Stream, error) {
 	_ = lastIdMs
 	_ = lastIdSeq
 
-	if valueType == ValueTypeStreamListPacks2 {
+	if valueType == valueTypeStreamListPacks2 {
 		// Load the first entry ID.
 		// The first non-tombstone entry, zero if empty.
 		firstIdMs, err := r.GetLengthUInt64()
@@ -325,7 +325,7 @@ func parseStream0(r *Reader, valueType byte, stream *Stream) (*Stream, error) {
 
 		// Load group offset.
 		var groupOffset uint64
-		if valueType == ValueTypeStreamListPacks2 {
+		if valueType == valueTypeStreamListPacks2 {
 			groupOffset, err = r.GetLengthUInt64()
 			if err != nil {
 				return nil, err
@@ -388,7 +388,7 @@ func parseStream0(r *Reader, valueType byte, stream *Stream) (*Stream, error) {
 			return nil, err
 		}
 		for i := 0; i < int(consumerNum); i++ {
-			c := new(Consumer)
+			c := new(StreamConsumer)
 			name, err := r.GetLengthString()
 			if err != nil {
 				return nil, err
