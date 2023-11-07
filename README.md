@@ -1,4 +1,4 @@
-## Redis lib
+# Redis lib
 
 - [Create connection with Redis server](#client)
 - [Parse RDB file](#parse-rdb)
@@ -55,7 +55,7 @@ Size: 4
 Members:  
         s2        s5        s4        s1        ...  
 ```    
-### Replication
+## Replication
 
 ```go  r, err := replica.NewReplica(&replica.Config{    
     MasterIP:            "127.0.0.1",    
