@@ -1,8 +1,8 @@
 ## Redis lib
 
-- [Create connection with Redis server](#Client)
-- [Parse RDB file](#Parse RDB)
-- [Fake replica, sync RDB and AOF from Redis Server](#Replication)
+- [Create connection with Redis server](#client)
+- [Parse RDB file](#parse-rdb)
+- [Fake replica, sync RDB and AOF from Redis Server](#replication)
 
 ## Client
 
