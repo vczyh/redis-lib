@@ -7,7 +7,7 @@
 ## Install
 
 ```shell
-go get github.com/vczyh/mysql-protocol
+go get github.com/vczyh/redis-lib
 ```
 
 ## Client
