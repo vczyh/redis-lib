@@ -81,7 +81,7 @@ Members:
 ...
 ```  
 
-### Replication
+## Replication
 
 ```go  
 r, err := replica.NewReplica(&replica.Config{  
