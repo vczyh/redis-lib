@@ -1,10 +1,10 @@
 ## Redis lib
 
-- 作为客户端，与`Redis Server`通信
-- 解析`RDB`
-- 作为`Replica`，从`Master`同步数据
+- [Create connection with Redis server](#Client)
+- [Parse RDB file](#Parse RDB)
+- [Fake replica, sync RDB and AOF from Redis Server](#Replication)
 
-### 客户端
+## Client
 
 ```go  
 c, err := client.NewClient(&client.Config{  
@@ -26,7 +26,7 @@ if err = c.Ping(); err != nil {
 }
 ```  
 
-### 解析 RDB
+## Parse RDB
 
 ```go  
 p, err := rdb.NewParser("/tmp/rdb_test.rdb")  
@@ -75,7 +75,7 @@ Members:
 ...
 ```  
 
-### 同步数据
+### Replication
 
 ```go  
 r, err := replica.NewReplica(&replica.Config{  
@@ -96,7 +96,7 @@ if err := r.SyncWithMaster(); err != nil {
 }
 ```
 
-### 同步数据并解析 RDB
+synchronize data and parse RDB:
 
 ```go
 rdbReader, rdbWriter := io.Pipe()  
