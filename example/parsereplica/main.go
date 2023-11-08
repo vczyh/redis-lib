@@ -17,6 +17,11 @@ func main() {
 		MasterPassword: "123",
 		RdbWriter:      rdbWriter,
 		AofWriter:      os.Stdout,
+		//ContinueAfterFullSync: true,
+
+		MasterReplicaId:         "aaa",
+		MasterReplicaOffset:     22,
+		ContinueIfPartialFailed: true,
 	})
 	if err != nil {
 		panic(err)

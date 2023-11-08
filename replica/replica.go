@@ -28,10 +28,23 @@ type Config struct {
 	AnnounceIP   string
 	AnnouncePort int
 
+	// Send command (PSYNC MasterReplicaId MasterReplicaOffset) to master.
+	// Replica will start a partial synchronization if replicaId and offset exist in master.
+	// Set ContinueIfPartialFailed true if you hope do a full synchronized after partial synchronization failed.
 	MasterReplicaId     string
 	MasterReplicaOffset int
 
-	RdbWriter io.Writer
+	// Whether to do a full synchronized after partial synchronization failed.
+	ContinueIfPartialFailed bool
+
+	// Receive RDB from master in full synchronization. RdbWriter will be closed when full synchronization finished.
+	RdbWriter io.WriteCloser
+
+	// Whether to continue incremental synchronization(AOF) after full synchronization.
+	ContinueAfterFullSync bool
+
+	// Receive AOF byte stream after full synchronization if ContinueAfterFullSync is true.
+	// Receive all AOF bytes stream in partial synchronization.
 	AofWriter io.Writer
 }
 
@@ -97,6 +110,7 @@ func (r *Replica) SyncWithMaster() error {
 	// Partial sync: PSYNC replicaId offset
 	replicaId := "?"
 	offset := -1
+	partial := r.config.MasterReplicaId != "" && r.config.MasterReplicaOffset > 0
 	if masterReplicaId := r.config.MasterReplicaId; masterReplicaId != "" {
 		replicaId = masterReplicaId
 	}
@@ -130,7 +144,11 @@ func (r *Replica) SyncWithMaster() error {
 		if err != nil {
 			return err
 		}
-		fmt.Println("full", offsetInt)
+
+		if partial && !r.config.ContinueIfPartialFailed {
+			return fmt.Errorf("master tells you that you need do a full synchroinzation")
+		}
+
 		if err := r.fullSync(offsetInt); err != nil {
 			return err
 		}
@@ -184,7 +202,6 @@ func (r *Replica) fullSync(offset int) error {
 	if err != nil {
 		return err
 	}
-	fmt.Printf("rdb payload size: %d\n", size)
 
 	bufSize := 10 * 1024 * 1024
 	buf := make([]byte, bufSize)
@@ -203,12 +220,16 @@ func (r *Replica) fullSync(offset int) error {
 			return err
 		}
 	}
-	r.replicaOffset.Store(int64(offset))
-
-	if err = r.syncAOF(); err != nil {
+	if err = r.config.RdbWriter.Close(); err != nil {
 		return err
 	}
+	r.replicaOffset.Store(int64(offset))
 
+	if r.config.ContinueAfterFullSync {
+		if err = r.syncAOF(); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 

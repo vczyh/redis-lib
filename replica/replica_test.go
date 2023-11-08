@@ -9,13 +9,14 @@ import (
 
 func TestNewReplica_FullSync(t *testing.T) {
 	r, err := NewReplica(&Config{
-		MasterIP:            "127.0.0.1",
-		MasterPort:          26379,
-		MasterUser:          "",
-		MasterPassword:      "123",
-		MasterReplicaOffset: 67528,
-		RdbWriter:           os.Stdout,
-		AofWriter:           os.Stdout,
+		MasterIP:              "127.0.0.1",
+		MasterPort:            26379,
+		MasterUser:            "",
+		MasterPassword:        "123",
+		MasterReplicaOffset:   67528,
+		RdbWriter:             os.Stdout,
+		AofWriter:             os.Stdout,
+		ContinueAfterFullSync: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -63,7 +64,7 @@ func parseRdb(r io.Reader) error {
 	}
 	for s.HasNext() {
 		e := s.Next()
-		e.Debug()
+		e.Event.Debug()
 	}
 	return s.Err()
 }

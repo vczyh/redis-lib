@@ -18,7 +18,7 @@ func TestParser_Parse(t *testing.T) {
 
 	for s.HasNext() {
 		e := s.Next()
-		e.Debug()
+		e.Event.Debug()
 	}
 
 	if err := s.Err(); err != nil {
