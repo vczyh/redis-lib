@@ -10,14 +10,14 @@ import (
 type Conn struct {
 	nc net.Conn
 	*bufio.Reader
-	w *bufio.Writer
+	*bufio.Writer
 }
 
 func NewConn(nc net.Conn) (*Conn, error) {
 	c := &Conn{
 		nc:     nc,
 		Reader: bufio.NewReader(nc),
-		w:      bufio.NewWriter(nc),
+		Writer: bufio.NewWriter(nc),
 	}
 	return c, nil
 }
@@ -40,24 +40,24 @@ func (c *Conn) SkipOk() error {
 func (c *Conn) WriteCommand(command string, args ...string) error {
 	array := []string{command}
 	array = append(array, args...)
-	if err := resp.WriteArray(c.w, array...); err != nil {
+	if err := resp.WriteArray(c, array...); err != nil {
 		return err
 	}
-	return c.w.Flush()
+	return c.Flush()
 }
 
 func (c *Conn) WriteArray(args ...string) error {
-	if err := resp.WriteArray(c.w, args...); err != nil {
+	if err := resp.WriteArray(c, args...); err != nil {
 		return err
 	}
-	return c.w.Flush()
+	return c.Flush()
 }
 
 func (c *Conn) WriteBulkString(str string) error {
-	if err := resp.WriteBulkString(c.w, str); err != nil {
+	if err := resp.WriteBulkString(c, str); err != nil {
 		return err
 	}
-	return c.w.Flush()
+	return c.Flush()
 }
 
 func (c *Conn) ReadData() ([]byte, error) {
