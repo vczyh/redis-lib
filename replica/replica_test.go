@@ -13,7 +13,6 @@ func TestNewReplica_FullSync(t *testing.T) {
 		MasterPort:            26379,
 		MasterUser:            "",
 		MasterPassword:        "123",
-		MasterReplicaOffset:   67528,
 		RdbWriter:             os.Stdout,
 		AofWriter:             os.Stdout,
 		ContinueAfterFullSync: true,

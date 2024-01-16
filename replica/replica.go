@@ -37,13 +37,13 @@ type Config struct {
 	// Whether to do a full synchronized after partial synchronization failed.
 	ContinueIfPartialFailed bool
 
-	// Receive RDB from master in full synchronization. RdbWriter will be closed when full synchronization finished.
-	RdbWriter io.WriteCloser
+	// Receive RDB from master in full synchronization.
+	RdbWriter io.Writer
 
 	// Whether to continue incremental synchronization(AOF) after full synchronization.
 	ContinueAfterFullSync bool
 
-	// Receive AOF byte stream after full synchronization if ContinueAfterFullSync is true.
+	// Receive AOF bytes stream after full synchronization if ContinueAfterFullSync is true.
 	// Receive all AOF bytes stream in partial synchronization.
 	AofWriter io.Writer
 }
@@ -219,9 +219,6 @@ func (r *Replica) fullSync(offset int) error {
 		if _, err = r.config.RdbWriter.Write(buf[:n]); err != nil {
 			return err
 		}
-	}
-	if err = r.config.RdbWriter.Close(); err != nil {
-		return err
 	}
 	r.replicaOffset.Store(int64(offset))
 
