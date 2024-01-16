@@ -1,10 +1,11 @@
 package replica
 
 import (
+	"bytes"
 	"fmt"
 	"github.com/vczyh/redis-lib/client"
-	"github.com/vczyh/redis-lib/resp"
 	"io"
+	"math"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -120,7 +121,7 @@ func (r *Replica) SyncWithMaster() error {
 	if err := conn.WriteCommand("PSYNC", replicaId, strconv.Itoa(offset)); err != nil {
 		return err
 	}
-	data, err := conn.ReadString()
+	reply, err := r.receiveSynchronousResponse()
 	if err != nil {
 		return err
 	}
@@ -134,10 +135,10 @@ func (r *Replica) SyncWithMaster() error {
 	}()
 
 	switch {
-	case strings.HasPrefix(data, "FULLRESYNC"):
-		split := strings.Split(data, " ")
+	case strings.HasPrefix(reply, "FULLRESYNC"):
+		split := strings.Split(reply, " ")
 		if len(split) != 3 {
-			return fmt.Errorf("PSYNC FULLRESYNC response format invalid: %s", data)
+			return fmt.Errorf("PSYNC FULLRESYNC response format invalid: %s", reply)
 		}
 		r.replicaId = split[1]
 		offsetInt, err := strconv.Atoi(split[2])
@@ -152,9 +153,9 @@ func (r *Replica) SyncWithMaster() error {
 		if err := r.fullSync(offsetInt); err != nil {
 			return err
 		}
-	case strings.HasPrefix(data, "CONTINUE"):
+	case strings.HasPrefix(reply, "CONTINUE"):
 		r.replicaId = replicaId
-		split := strings.Split(data, " ")
+		split := strings.Split(reply, " ")
 		if len(split) >= 2 {
 			r.replicaId = split[1]
 		}
@@ -163,10 +164,30 @@ func (r *Replica) SyncWithMaster() error {
 			return err
 		}
 	default:
-		return fmt.Errorf("unsupported PSYNC commadn response: %s", data)
+		return fmt.Errorf("unsupported PSYNC commadn response: %s", reply)
 	}
 
 	return nil
+}
+
+// replication.c::receiveSynchronousResponse
+func (r *Replica) receiveSynchronousResponse() (string, error) {
+	// Read the reply from the server.
+	conn := r.client.Conn()
+	for {
+		bytes, err := conn.Peek(1)
+		if err != nil {
+			return "", err
+		}
+		if bytes[0] != '\n' {
+			break
+		} else {
+			if _, err := conn.Discard(1); err != nil {
+				return "", err
+			}
+		}
+	}
+	return conn.ReadString()
 }
 
 func (r *Replica) Close() error {
@@ -190,36 +211,104 @@ func (r *Replica) partialSync() error {
 func (r *Replica) fullSync(offset int) error {
 	conn := r.client.Conn()
 
-	bs, err := conn.ReadData()
+	for {
+		bs, err := conn.Peek(1)
+		if err != nil {
+			return err
+		}
+		if bs[0] != '\n' {
+			break
+		} else {
+			if _, err := conn.Discard(1); err != nil {
+				return err
+			}
+		}
+	}
+	replayData, err := conn.ReadData()
 	if err != nil {
 		return err
 	}
-	if bs[0] != resp.DataTypeBulkString {
-		return fmt.Errorf("bad protocol from MASTER, the first byte is not '$' (we received '%s')", string(bs[0]))
+	if len(replayData) == 0 {
+		/* At this stage just a newline works as a PING in order to take
+		 * the connection live. So we refresh our last interaction
+		 * timestamp. */
+		return nil
+	} else if replayData[0] != '$' {
+		return fmt.Errorf("bad protocol from MASTER, the first byte is not '$' (we received '%s'), are you sure the host and port are right", replayData)
 	}
+	reply := string(replayData[1:])
 
-	size, err := strconv.Atoi(string(bs[1:]))
-	if err != nil {
-		return err
+	// Static vars used to hold the EOF mark, and the last bytes received
+	// from the server: when they match, we reached the end of the transfer.
+	eofMark := make([]byte, 40)
+	lastBytes := make([]byte, 40)
+	lastBytesSize := 0
+	transferSize := 0
+	var useMark bool
+	if strings.HasPrefix(reply, "EOF") {
+		useMark = true
+		copy(eofMark, reply[4:])
+		transferSize = 0
+	} else {
+		useMark = false
+		transferSize, err = strconv.Atoi(reply)
+		if err != nil {
+			return err
+		}
 	}
 
 	bufSize := 10 * 1024 * 1024
 	buf := make([]byte, bufSize)
-	unReadSize := size
-	for unReadSize > 0 {
-		needSize := bufSize
-		if unReadSize < needSize {
-			needSize = unReadSize
+
+	if useMark {
+		for {
+			n, err := conn.Read(buf)
+			if err != nil {
+				return err
+			}
+
+			if n > 40 {
+				if _, err = r.config.RdbWriter.Write(lastBytes[:lastBytesSize]); err != nil {
+					return err
+				}
+				copy(lastBytes, buf[n-40:])
+				lastBytesSize = 40
+				if _, err = r.config.RdbWriter.Write(buf[:n-40]); err != nil {
+					return err
+				}
+			} else {
+				if lastBytesSize+n > 40 {
+					if _, err = r.config.RdbWriter.Write(lastBytes[:lastBytesSize+n-40]); err != nil {
+						return err
+					}
+				}
+				copy(lastBytes, lastBytes[n:])
+				copy(lastBytes[40-n:], buf[:n])
+				lastBytesSize = int(math.Min(float64(n+lastBytesSize), 40))
+			}
+
+			if bytes.Equal(lastBytes, eofMark) {
+				break
+			}
 		}
-		n, err := conn.Read(buf[:needSize])
-		if err != nil {
-			return err
-		}
-		unReadSize -= n
-		if _, err = r.config.RdbWriter.Write(buf[:n]); err != nil {
-			return err
+	} else {
+		unReadSize := transferSize
+		for unReadSize > 0 {
+			needSize := bufSize
+			if unReadSize < needSize {
+				needSize = unReadSize
+			}
+			n, err := conn.Read(buf[:needSize])
+			if err != nil {
+				return err
+			}
+			unReadSize -= n
+			if _, err = r.config.RdbWriter.Write(buf[:n]); err != nil {
+				return err
+			}
 		}
 	}
+
 	r.replicaOffset.Store(int64(offset))
 
 	if r.config.ContinueAfterFullSync {
@@ -227,6 +316,7 @@ func (r *Replica) fullSync(offset int) error {
 			return err
 		}
 	}
+
 	return nil
 }
 

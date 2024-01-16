@@ -10,7 +10,7 @@ import (
 func TestNewReplica_FullSync(t *testing.T) {
 	r, err := NewReplica(&Config{
 		MasterIP:              "127.0.0.1",
-		MasterPort:            26379,
+		MasterPort:            46379,
 		MasterUser:            "",
 		MasterPassword:        "123",
 		RdbWriter:             os.Stdout,
@@ -30,7 +30,7 @@ func TestReplica_Sync(t *testing.T) {
 
 	r, err := NewReplica(&Config{
 		MasterIP:              "127.0.0.1",
-		MasterPort:            26379,
+		MasterPort:            46379,
 		MasterUser:            "",
 		MasterPassword:        "123",
 		RdbWriter:             rdbWriter,

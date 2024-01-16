@@ -53,7 +53,7 @@ func ReadString(r *bufio.Reader) (string, error) {
 		return string(v[:size]), nil
 	}
 
-	return "", fmt.Errorf("not string type")
+	return "", fmt.Errorf("not string type: %d", data[0])
 }
 
 func ReadSeparatedBytes(r *bufio.Reader) ([]byte, error) {

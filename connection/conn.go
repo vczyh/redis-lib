@@ -9,21 +9,21 @@ import (
 
 type Conn struct {
 	nc net.Conn
-	r  *bufio.Reader
-	w  *bufio.Writer
+	*bufio.Reader
+	w *bufio.Writer
 }
 
 func NewConn(nc net.Conn) (*Conn, error) {
 	c := &Conn{
-		nc: nc,
-		r:  bufio.NewReader(nc),
-		w:  bufio.NewWriter(nc),
+		nc:     nc,
+		Reader: bufio.NewReader(nc),
+		w:      bufio.NewWriter(nc),
 	}
 	return c, nil
 }
 
 func (c *Conn) ReadString() (string, error) {
-	return resp.ReadString(c.r)
+	return resp.ReadString(c.Reader)
 }
 
 func (c *Conn) SkipOk() error {
@@ -61,15 +61,7 @@ func (c *Conn) WriteBulkString(str string) error {
 }
 
 func (c *Conn) ReadData() ([]byte, error) {
-	return resp.ReadData(c.r)
-}
-
-func (c *Conn) ReadSeparatedBytes() ([]byte, error) {
-	return resp.ReadSeparatedBytes(c.r)
-}
-
-func (c *Conn) Read(b []byte) (int, error) {
-	return c.r.Read(b)
+	return resp.ReadData(c.Reader)
 }
 
 func (c *Conn) Close() error {
