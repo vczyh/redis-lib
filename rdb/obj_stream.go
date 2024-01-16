@@ -344,14 +344,9 @@ func parseStream0(r *rdbReader, valueType byte, stream *StreamObjectEvent) (*Str
 		if err != nil {
 			return nil, err
 		}
-		pelMap := make(map[StreamId]*StreamNAck, pelSize)
+		//pelMap := make(map[StreamId]*StreamNAck, pelSize)
+		pelMap := make(map[string]*StreamNAck, pelSize)
 		for i := 0; i < pelSize; i++ {
-			//rawId, err := r.ReadFixedBytes(16)
-			//if err != nil {
-			//	return nil, err
-			//}
-			//idMs := binary.BigEndian.Uint64(rawId[:8])
-			//idSeq := binary.BigEndian.Uint64(rawId[8:])
 			pelIdMs, err := r.GetBUint64()
 			if err != nil {
 				return nil, err
@@ -378,7 +373,7 @@ func parseStream0(r *rdbReader, valueType byte, stream *StreamObjectEvent) (*Str
 				Consumer:      nil,
 			}
 			cg.PEL = append(cg.PEL, pel)
-			pelMap[pel.Id] = pel
+			pelMap[fmt.Sprintf("%d-%d", pelIdMs, pelIdSeq)] = pel
 		}
 
 		// Now that we loaded our global PEL, we need to load the
@@ -409,20 +404,16 @@ func parseStream0(r *rdbReader, valueType byte, stream *StreamObjectEvent) (*Str
 			}
 
 			for i := 0; i < int(pelSize); i++ {
-				consumerPelIdMs, err := r.GetLengthUInt64()
+				consumerPelIdMs, err := r.GetBUint64()
 				if err != nil {
 					return nil, err
 				}
-				consumerPelIdSeq, err := r.GetLengthUInt64()
+				consumerPelIdSeq, err := r.GetBUint64()
 				if err != nil {
 					return nil, err
 				}
-				pelId := StreamId{
-					Ms:  consumerPelIdMs,
-					Seq: consumerPelIdSeq,
-				}
-
-				pel, ok := pelMap[pelId]
+				messageId := fmt.Sprintf("%d-%d", consumerPelIdMs, consumerPelIdSeq)
+				pel, ok := pelMap[messageId]
 				if !ok {
 					return nil, fmt.Errorf("consumer pel not found in global pel")
 				}

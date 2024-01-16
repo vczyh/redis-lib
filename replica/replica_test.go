@@ -29,12 +29,13 @@ func TestReplica_Sync(t *testing.T) {
 	rdbReader, rdbWriter := io.Pipe()
 
 	r, err := NewReplica(&Config{
-		MasterIP:       "127.0.0.1",
-		MasterPort:     26379,
-		MasterUser:     "",
-		MasterPassword: "123",
-		RdbWriter:      rdbWriter,
-		AofWriter:      os.Stdout,
+		MasterIP:              "127.0.0.1",
+		MasterPort:            26379,
+		MasterUser:            "",
+		MasterPassword:        "123",
+		RdbWriter:             rdbWriter,
+		AofWriter:             os.Stdout,
+		ContinueAfterFullSync: true,
 	})
 	if err != nil {
 		t.Fatal(err)
