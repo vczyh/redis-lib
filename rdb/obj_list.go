@@ -50,6 +50,8 @@ func parseList(key string, r *rdbReader, valueType byte) (*ListObjectEvent, erro
 		return parseListInZipList(r, list)
 	case valueTypeListQuickList:
 		return parseListInQuickList(r, list)
+	case valueTypeListQuickList2:
+		return parseListInQuickList2(r, list)
 	default:
 		return nil, fmt.Errorf("unsupported list value type: %x", valueType)
 	}
@@ -96,4 +98,36 @@ func parseListInQuickList(r *rdbReader, list *ListObjectEvent) (*ListObjectEvent
 	}
 	list.Members = members
 	return list, nil
+}
+
+func parseListInQuickList2(r *rdbReader, list *ListObjectEvent) (*ListObjectEvent, error) {
+	size, err := r.GetLengthInt()
+	if err != nil {
+		return nil, err
+	}
+	for i := 0; i < size; i++ {
+		container, err := r.GetLengthInt()
+		if err != nil {
+			return nil, err
+		}
+
+		switch container {
+		case 1:
+			member, err := r.GetLengthString()
+			if err != nil {
+				return nil, err
+			}
+			list.Members = append(list.Members, member)
+		case 2:
+			members, err := parseListPack(r)
+			if err != nil {
+				return nil, err
+			}
+			list.Members = append(list.Members, members...)
+		default:
+			return nil, fmt.Errorf("quicklist integrity check failed, unsupported listpack container: %d", container)
+		}
+	}
+
+	return list, err
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"math"
 	"strconv"
 )
 
@@ -74,6 +75,38 @@ func (r *rdbReader) GetBUint64() (uint64, error) {
 		return 0, err
 	}
 	return binary.BigEndian.Uint64(b), nil
+}
+
+func (r *rdbReader) GetLDouble() (float64, error) {
+	bits, err := r.GetLUint64()
+	if err != nil {
+		return 0, err
+	}
+	return math.Float64frombits(bits), nil
+}
+
+// GetDoubleValue
+// rdb.c:;rdbLoadDoubleValue
+func (r *rdbReader) GetDoubleValue() (float64, error) {
+	length, err := r.ReadByte()
+	if err != nil {
+		return 0, err
+	}
+
+	switch length {
+	case 255:
+		return math.Inf(-1), nil
+	case 254:
+		return math.Inf(0), nil
+	case 253:
+		return math.NaN(), nil
+	default:
+		val, err := r.ReadFixedString(int(length))
+		if err != nil {
+			return 0, err
+		}
+		return strconv.ParseFloat(val, 64)
+	}
 }
 
 func (r *rdbReader) GetLengthString() (string, error) {

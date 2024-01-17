@@ -1,7 +1,6 @@
 package rdb
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"strconv"
@@ -119,11 +118,7 @@ func parseStream0(r *rdbReader, valueType byte, stream *StreamObjectEvent) (*Str
 		masterSeq := binary.BigEndian.Uint64(nodeKey[8:])
 
 		// Parse list pack
-		listPackBytes, err := r.GetLengthBytes()
-		if err != nil {
-			return nil, err
-		}
-		members, err := parseListPack(newRdbReader(bytes.NewReader(listPackBytes)))
+		members, err := parseListPack(r)
 		if err != nil {
 			return nil, err
 		}

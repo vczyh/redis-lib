@@ -1,6 +1,7 @@
 package rdb
 
 import (
+	"bytes"
 	"fmt"
 	"math"
 	"strconv"
@@ -36,8 +37,14 @@ const (
 )
 
 func parseListPack(r *rdbReader) ([]string, error) {
+	listPackBytes, err := r.GetLengthBytes()
+	if err != nil {
+		return nil, err
+	}
+	r = newRdbReader(bytes.NewReader(listPackBytes))
+
 	// Total length
-	_, err := r.GetLUint32()
+	_, err = r.GetLUint32()
 	if err != nil {
 		return nil, err
 	}

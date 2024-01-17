@@ -5,17 +5,18 @@ import (
 	"io"
 	"os"
 	"testing"
+	"time"
 )
 
 func TestNewReplica_FullSync(t *testing.T) {
 	r, err := NewReplica(&Config{
-		MasterIP:              "127.0.0.1",
-		MasterPort:            46379,
-		MasterUser:            "",
-		MasterPassword:        "123",
-		RdbWriter:             os.Stdout,
-		AofWriter:             os.Stdout,
-		ContinueAfterFullSync: true,
+		MasterIP:       "127.0.0.1",
+		MasterPort:     46379,
+		MasterUser:     "",
+		MasterPassword: "123",
+		RdbWriter:      os.Stdout,
+		AofWriter:      os.Stdout,
+		//ContinueAfterFullSync: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -29,13 +30,13 @@ func TestReplica_Sync(t *testing.T) {
 	rdbReader, rdbWriter := io.Pipe()
 
 	r, err := NewReplica(&Config{
-		MasterIP:              "127.0.0.1",
-		MasterPort:            46379,
-		MasterUser:            "",
-		MasterPassword:        "123",
-		RdbWriter:             rdbWriter,
-		AofWriter:             os.Stdout,
-		ContinueAfterFullSync: true,
+		MasterIP:       "127.0.0.1",
+		MasterPort:     46379,
+		MasterUser:     "",
+		MasterPassword: "123",
+		RdbWriter:      rdbWriter,
+		AofWriter:      os.Stdout,
+		//ContinueAfterFullSync: true,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -51,6 +52,8 @@ func TestReplica_Sync(t *testing.T) {
 	if err = r.SyncWithMaster(); err != nil {
 		t.Fatal(err)
 	}
+
+	time.Sleep(1 * time.Second)
 }
 
 func parseRdb(r io.Reader) error {

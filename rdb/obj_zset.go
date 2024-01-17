@@ -30,13 +30,65 @@ func parseZSet(key string, r *rdbReader, valueType byte) (*ZSetObjectEvent, erro
 	zSet := &ZSetObjectEvent{Key: key}
 	switch valueType {
 	case valueTypeZSetZipList:
-		return parseSortedSetInZipList(r, zSet)
+		return parseZSetInZipList(r, zSet)
+	case valueTypeZSetListPack:
+		return parseZSetInListPack(r, zSet)
+	case valueTypeZSet:
+		return parseZSet0(r, zSet)
+	case valueTypeZSet2:
+		return parseZSet2(r, zSet)
 	default:
 		return nil, fmt.Errorf("unsupported zset value type: %x", valueType)
 	}
 }
 
-func parseSortedSetInZipList(r *rdbReader, set *ZSetObjectEvent) (*ZSetObjectEvent, error) {
+func parseZSet0(r *rdbReader, set *ZSetObjectEvent) (*ZSetObjectEvent, error) {
+	length, err := r.GetLengthInt()
+	if err != nil {
+		return nil, err
+	}
+	members := make([]ZSetMember, length)
+	for i := 0; i < length; i++ {
+		value, err := r.GetLengthString()
+		if err != nil {
+			return nil, err
+		}
+		score, err := r.GetDoubleValue()
+		if err != nil {
+			return nil, err
+		}
+		members[i].Value = value
+		members[i].Score = score
+	}
+	set.Members = members
+
+	return set, nil
+}
+
+func parseZSet2(r *rdbReader, set *ZSetObjectEvent) (*ZSetObjectEvent, error) {
+	length, err := r.GetLengthInt()
+	if err != nil {
+		return nil, err
+	}
+	members := make([]ZSetMember, length)
+	for i := 0; i < length; i++ {
+		value, err := r.GetLengthString()
+		if err != nil {
+			return nil, err
+		}
+		score, err := r.GetLDouble()
+		if err != nil {
+			return nil, err
+		}
+		members[i].Value = value
+		members[i].Score = score
+	}
+	set.Members = members
+
+	return set, nil
+}
+
+func parseZSetInZipList(r *rdbReader, set *ZSetObjectEvent) (*ZSetObjectEvent, error) {
 	list, err := parseZipList(r)
 	if err != nil {
 		return nil, err
@@ -54,10 +106,34 @@ func parseSortedSetInZipList(r *rdbReader, set *ZSetObjectEvent) (*ZSetObjectEve
 		if err != nil {
 			return nil, err
 		}
-		members[i/2] = ZSetMember{
-			Value: value,
-			Score: scoreDouble,
+		members[i/2].Value = value
+		members[i/2].Score = scoreDouble
+	}
+	set.Members = members
+
+	return set, nil
+}
+
+func parseZSetInListPack(r *rdbReader, set *ZSetObjectEvent) (*ZSetObjectEvent, error) {
+	list, err := parseListPack(r)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(list)%2 != 0 {
+		return nil, fmt.Errorf("error length for listpack: %d", len(list))
+	}
+
+	members := make([]ZSetMember, len(list)/2)
+	for i := 0; i < len(list); i += 2 {
+		value := list[i]
+		score := list[i+1]
+		scoreDouble, err := strconv.ParseFloat(score, 10)
+		if err != nil {
+			return nil, err
 		}
+		members[i/2].Value = value
+		members[i/2].Score = scoreDouble
 	}
 	set.Members = members
 
