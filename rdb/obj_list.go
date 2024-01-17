@@ -42,15 +42,15 @@ func parseList(key string, r *rdbReader, valueType byte) (*ListObjectEvent, erro
 		Key: key,
 	}
 	switch valueType {
-	case valueTypeList:
+	case rdbTypeList:
 		// TODO not tested
 		return parseList0(r, list)
-	case valueTypeZipList:
+	case rdbTypeZipList:
 		// TODO not tested
 		return parseListInZipList(r, list)
-	case valueTypeListQuickList:
+	case rdbTypeListQuickList:
 		return parseListInQuickList(r, list)
-	case valueTypeListQuickList2:
+	case rdbTypeListQuickList2:
 		return parseListInQuickList2(r, list)
 	default:
 		return nil, fmt.Errorf("unsupported list value type: %x", valueType)

@@ -29,13 +29,13 @@ func (e *ZSetObjectEvent) Debug() {
 func parseZSet(key string, r *rdbReader, valueType byte) (*ZSetObjectEvent, error) {
 	zSet := &ZSetObjectEvent{Key: key}
 	switch valueType {
-	case valueTypeZSetZipList:
+	case rdbTypeZSetZipList:
 		return parseZSetInZipList(r, zSet)
-	case valueTypeZSetListPack:
+	case rdbTypeZSetListPack:
 		return parseZSetInListPack(r, zSet)
-	case valueTypeZSet:
+	case rdbTypeZSet:
 		return parseZSet0(r, zSet)
-	case valueTypeZSet2:
+	case rdbTypeZSet2:
 		return parseZSet2(r, zSet)
 	default:
 		return nil, fmt.Errorf("unsupported zset value type: %x", valueType)

@@ -21,26 +21,27 @@ const (
 	opCodeSelectDb  = 0xFE
 	opCodeEOF       = 0xFF
 
-	valueTypeString           = 0
-	valueTypeList             = 1
-	valueTypeSet              = 2
-	valueTypeZSet             = 3
-	valueTypeHash             = 4
-	valueTypeZSet2            = 5 // ZSET version 2 with doubles stored in binary.
-	valueTypeModule           = 6
-	valueTypeModule2          = 7 // Module value with annotations for parsing without the generating module being loaded.
-	valueTypeHashZipMap       = 9
-	valueTypeZipList          = 10
-	valueTypeIntSet           = 11
-	valueTypeZSetZipList      = 12
-	valueTypeHashZipList      = 13
-	valueTypeListQuickList    = 14
-	valueTypeStreamListPacks  = 15
-	valueTypeHashListPack     = 16
-	valueTypeZSetListPack     = 17
-	valueTypeListQuickList2   = 18
-	valueTypeStreamListPacks2 = 19
-	valueTypeSetListPack      = 20
+	rdbTypeString           = 0
+	rdbTypeList             = 1
+	rdbTypeSet              = 2
+	rdbTypeZSet             = 3
+	rdbTypeHash             = 4
+	rdbTypeZSet2            = 5 // ZSET version 2 with doubles stored in binary.
+	rdbTypeModulePreGA      = 6
+	rdbTypeModule2          = 7 // Module value with annotations for parsing without the generating module being loaded.
+	rdbTypeHashZipMap       = 9
+	rdbTypeZipList          = 10
+	rdbTypeIntSet           = 11
+	rdbTypeZSetZipList      = 12
+	rdbTypeHashZipList      = 13
+	rdbTypeListQuickList    = 14
+	rdbTypeStreamListPacks  = 15
+	rdbTypeHashListPack     = 16
+	rdbTypeZSetListPack     = 17
+	rdbTypeListQuickList2   = 18
+	rdbTypeStreamListPacks2 = 19
+	rdbTypeSetListPack      = 20
+	rdbTypeStreamListPacks3 = 21
 )
 
 type Parser struct {
@@ -277,37 +278,37 @@ func (p *Parser) parseEntryWithValueType(valueType byte, expireAt uint64) (*Redi
 	}
 
 	switch valueType {
-	case valueTypeString:
+	case rdbTypeString:
 		event, err := parseString(key, p.r)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeStringObject, Event: event}, nil
-	case valueTypeList, valueTypeZipList, valueTypeListQuickList, valueTypeListQuickList2:
+	case rdbTypeList, rdbTypeZipList, rdbTypeListQuickList, rdbTypeListQuickList2:
 		event, err := parseList(key, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeListObject, Event: event}, nil
-	case valueTypeSet, valueTypeSetListPack, valueTypeIntSet:
+	case rdbTypeSet, rdbTypeSetListPack, rdbTypeIntSet:
 		event, err := parseSet(key, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeSetObject, Event: event}, nil
-	case valueTypeZSetZipList, valueTypeZSetListPack, valueTypeZSet, valueTypeZSet2:
+	case rdbTypeZSetZipList, rdbTypeZSetListPack, rdbTypeZSet, rdbTypeZSet2:
 		event, err := parseZSet(key, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeZSetObject, Event: event}, nil
-	case valueTypeHashZipList, valueTypeHashListPack, valueTypeHash:
+	case rdbTypeHashZipList, rdbTypeHashListPack, rdbTypeHash:
 		event, err := parseHash(key, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeHashObject, Event: event}, nil
-	case valueTypeStreamListPacks, valueTypeStreamListPacks2:
+	case rdbTypeStreamListPacks, rdbTypeStreamListPacks2:
 		event, err := parseStream(key, p.r, valueType)
 		if err != nil {
 			return nil, err

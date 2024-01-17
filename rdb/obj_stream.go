@@ -92,7 +92,7 @@ type StreamId struct {
 func parseStream(key string, r *rdbReader, valueType byte) (*StreamObjectEvent, error) {
 	stream := &StreamObjectEvent{Key: key}
 	switch valueType {
-	case valueTypeStreamListPacks, valueTypeListQuickList2:
+	case rdbTypeStreamListPacks, rdbTypeListQuickList2:
 		return parseStream0(r, valueType, stream)
 	default:
 		return nil, fmt.Errorf("unsupported stream rdb type: 0x%x", valueType)
@@ -247,7 +247,7 @@ func parseStream0(r *rdbReader, valueType byte, stream *StreamObjectEvent) (*Str
 	_ = lastIdMs
 	_ = lastIdSeq
 
-	if valueType == valueTypeStreamListPacks2 {
+	if valueType == rdbTypeStreamListPacks2 {
 		// Load the first entry ID.
 		// The first non-tombstone entry, zero if empty.
 		firstIdMs, err := r.GetLengthUInt64()
@@ -320,7 +320,7 @@ func parseStream0(r *rdbReader, valueType byte, stream *StreamObjectEvent) (*Str
 
 		// Load group offset.
 		var groupOffset uint64
-		if valueType == valueTypeStreamListPacks2 {
+		if valueType == rdbTypeStreamListPacks2 {
 			groupOffset, err = r.GetLengthUInt64()
 			if err != nil {
 				return nil, err

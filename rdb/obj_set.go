@@ -24,11 +24,11 @@ func (e *SetObjectEvent) Debug() {
 func parseSet(key string, r *rdbReader, valueType byte) (*SetObjectEvent, error) {
 	set := &SetObjectEvent{Key: key}
 	switch valueType {
-	case valueTypeSet:
+	case rdbTypeSet:
 		return parseSet0(r, set)
-	case valueTypeSetListPack:
+	case rdbTypeSetListPack:
 		return parseSetInListPack(r, set)
-	case valueTypeIntSet:
+	case rdbTypeIntSet:
 		return parseSetInIntSet(r, set)
 	default:
 		return nil, fmt.Errorf("unsupported set value type: %x", valueType)

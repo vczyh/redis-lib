@@ -29,11 +29,11 @@ func (e *HashObjectEvent) Debug() {
 func parseHash(key string, r *rdbReader, valueType byte) (*HashObjectEvent, error) {
 	h := &HashObjectEvent{Key: key}
 	switch valueType {
-	case valueTypeHashZipList:
+	case rdbTypeHashZipList:
 		return parseHashInZipList(r, h)
-	case valueTypeHashListPack:
+	case rdbTypeHashListPack:
 		return parseHashInListPack(r, h)
-	case valueTypeHash:
+	case rdbTypeHash:
 		return parseHash0(r, h)
 	default:
 		return nil, fmt.Errorf("unsupported hash value type: %x", valueType)

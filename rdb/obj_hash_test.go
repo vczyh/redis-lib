@@ -19,7 +19,7 @@ func TestParseHashWithListPack(t *testing.T) {
 	}
 	assert.Equal(t, "key_hash", key)
 
-	e, err := parseHash(key, r, valueTypeHashListPack)
+	e, err := parseHash(key, r, rdbTypeHashListPack)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestParseHashWithHash(t *testing.T) {
 	}
 	assert.Equal(t, "key_hash", key)
 
-	e, err := parseHash(key, r, valueTypeHash)
+	e, err := parseHash(key, r, rdbTypeHash)
 	if err != nil {
 		t.Fatal(err)
 	}
