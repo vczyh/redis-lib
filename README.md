@@ -1,5 +1,7 @@
 # Redis lib
 
+## Features
+
 - [Create connection with Redis server](#client)
 - [Parse RDB file](#parse-rdb)
 - [Fake replica, sync RDB and AOF with master](#replication)
