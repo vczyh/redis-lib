@@ -2,21 +2,21 @@
 
 ## Features
 
-- [Create connection with Redis server](#client)
+- [Create connection with Redis server](#create-connection)
 - [Parse RDB file](#parse-rdb)
-- [Fake replica, sync RDB and AOF with master](#replication)
+- [Fake replica, sync RDB and AOF with master](#fake-replica)
 
 ## Compatibility
 
 - Support Redis 6 / 7
 
-## Installation
+## Install
 
 ```shell
 go get github.com/vczyh/redis-lib
 ```
 
-## Client
+## Create Connection
 
 ```go  
 c, err := client.NewClient(&client.Config{  
@@ -87,7 +87,7 @@ Members:
 ...
 ```  
 
-## Replication
+## Fake Replica
 
 ```go  
 r, err := replica.NewReplica(&replica.Config{  
