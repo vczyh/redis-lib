@@ -47,6 +47,13 @@ type Config struct {
 	// Receive AOF bytes stream after full synchronization if ContinueAfterFullSync is true.
 	// Receive all AOF bytes stream in partial synchronization.
 	AofWriter io.Writer
+
+	// Whether to support diskless replication.
+	// https://redis.io/docs/management/replication/#:~:text=Normally%20a%20full,as%20intermediate%20storage.
+	// Change the default of repl-diskless-sync to yes in Redis 7.0. Replica has to wait repl-diskless-sync-delay
+	// to receive the rdb. So instead of waiting, default not support diskless replication.
+	// With slow disks and fast (large bandwidth) networks, diskless replication works better.
+	SupportDisklessReplication bool
 }
 
 func NewReplica(config *Config) (*Replica, error) {
@@ -97,8 +104,13 @@ func (r *Replica) SyncWithMaster() error {
 	// PSYNC2: supports PSYNC v2, so understands +CONTINUE <new repl ID>.
 	//
 	// The master will ignore capabilities it does not understand.
-	// TODO  eof
-	if err := conn.WriteCommand("REPLCONF", "capa", "eof", "capa", "psync2"); err != nil {
+	args := []string{
+		"capa", "psync2",
+	}
+	if r.config.SupportDisklessReplication {
+		args = append(args, "capa", "eof")
+	}
+	if err := conn.WriteCommand("REPLCONF", args...); err != nil {
 		return err
 	}
 	if err := conn.SkipOk(); err != nil {
