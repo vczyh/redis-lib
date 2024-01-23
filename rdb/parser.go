@@ -15,11 +15,11 @@ const (
 	opCodeIdle      = 248
 	opCodeFreq      = 249
 	opCodeAux       = 250
-	opCodeResizeDb  = 0xFB
-	opExpireTimeMs  = 0xFC
-	opExpireTime    = 0xFD
-	opCodeSelectDb  = 0xFE
-	opCodeEOF       = 0xFF
+	opCodeResizeDb  = 251
+	opExpireTimeMs  = 252
+	opExpireTime    = 253
+	opCodeSelectDb  = 254
+	opCodeEOF       = 255
 
 	rdbTypeString           = 0
 	rdbTypeList             = 1
@@ -132,51 +132,16 @@ func (p *Parser) parse(eventC chan *eventWrapper) error {
 		},
 	}
 
-	var expireTime uint64
-	var isEnd bool
+	dbId := 0
+	var expireTime int64 = -1
 
+	var isEnd bool
 	for !isEnd {
-		b, err := p.r.ReadByte()
+		rdbType, err := p.r.ReadByte()
 		if err != nil {
 			return err
 		}
-		switch b {
-		case opCodeAux:
-			e, err := p.parseAuxiliaryFields()
-			if err != nil {
-				return err
-			}
-			eventC <- &eventWrapper{
-				e: &RedisRdbEvent{
-					EventType: opCodeAux,
-					Event:     e,
-				},
-			}
-			continue
-		case opCodeSelectDb:
-			e, err := p.parseSelectDb()
-			if err != nil {
-				return err
-			}
-			eventC <- &eventWrapper{
-				e: &RedisRdbEvent{
-					EventType: EventTypeSelectDb,
-					Event:     e,
-				},
-			}
-			continue
-		case opCodeResizeDb:
-			e, err := p.parseResizeDb()
-			if err != nil {
-				return err
-			}
-			eventC <- &eventWrapper{
-				e: &RedisRdbEvent{
-					EventType: EventTypeResizeDb,
-					Event:     e,
-				},
-			}
-			continue
+		switch rdbType {
 		case opExpireTime:
 			expireTime, err = p.parseExpireTime()
 			if err != nil {
@@ -189,16 +154,93 @@ func (p *Parser) parse(eventC chan *eventWrapper) error {
 				return err
 			}
 			continue
+		case opCodeFreq:
+			// LFU frequency.
+			if err := p.parseFreq(); err != nil {
+				return err
+			}
+			continue
+		case opCodeIdle:
+			// LRU idle time.
+			_, err := p.parseIdle()
+			if err != nil {
+				return err
+			}
+			continue
 		case opCodeEOF:
 			isEnd = true
 			continue
+		case opCodeSelectDb:
+			e, err := p.parseSelectDb()
+			if err != nil {
+				return err
+			}
+			dbId = e.Db
+			eventC <- &eventWrapper{
+				e: &RedisRdbEvent{
+					EventType: EventTypeSelectDb,
+					Event:     e,
+				},
+			}
+			continue
+		case opCodeResizeDb:
+			// RESIZEDB: Hint about the size of the keys in the currently
+			// selected data base, in order to avoid useless rehashing.
+			e, err := p.parseResizeDb()
+			if err != nil {
+				return err
+			}
+			eventC <- &eventWrapper{
+				e: &RedisRdbEvent{
+					EventType: EventTypeResizeDb,
+					Event:     e,
+				},
+			}
+			continue
+		case opCodeAux:
+			// AUX: generic string-string fields. Use to add state to RDB
+			// which is backward compatible. Implementations of RDB loading
+			// are required to skip AUX fields they don't understand.
+			//
+			// An AUX field is composed of two strings: key and value.
+			e, err := p.parseAuxiliaryFields()
+			if err != nil {
+				return err
+			}
+			eventC <- &eventWrapper{
+				e: &RedisRdbEvent{
+					EventType: EventTypeAuxField,
+					Event:     e,
+				},
+			}
+			continue
+		case opCodeModuleAux:
+			// Load module data that is not related to the Redis key space.
+			// Such data can be potentially be stored both before and after the
+			// RDB keys-values section.
+			// TODO
+			continue
+		case opcodeFunction:
+			return fmt.Errorf("pre-release function format not supported")
+		case opCodeFunction2:
+			// TODO
+			return fmt.Errorf("function not suuported")
 		}
 
-		e, err := p.parseEntryWithValueType(b, expireTime)
+		// Load object key.
+		key, err := p.parseKey()
+		if err != nil {
+			return err
+		}
+		// Load object value.
+		e, err := p.parseEntryWithValueType(rdbType, key, dbId, expireTime)
 		if err != nil {
 			return err
 		}
 		eventC <- &eventWrapper{e: e}
+
+		// Reset state.
+		expireTime = -1
 	}
 
 	if p.version >= 5 {
@@ -209,6 +251,15 @@ func (p *Parser) parse(eventC chan *eventWrapper) error {
 	}
 
 	return nil
+}
+
+func (p *Parser) parseFreq() error {
+	_, err := p.r.ReadByte()
+	return err
+}
+
+func (p *Parser) parseIdle() (uint64, error) {
+	return p.r.GetLengthUInt64()
 }
 
 func (p *Parser) parseAuxiliaryFields() (*AuxFieldEvent, error) {
@@ -251,65 +302,68 @@ func (p *Parser) parseResizeDb() (*ResizeDbEvent, error) {
 	}, nil
 }
 
-func (p *Parser) parseExpireTime() (uint64, error) {
+func (p *Parser) parseExpireTime() (int64, error) {
 	b, err := p.r.ReadFixedBytes(4)
 	if err != nil {
 		return 0, nil
 	}
 	expireAt := binary.LittleEndian.Uint32(b)
-	return uint64(expireAt) * 1000, nil
+	return int64(expireAt) * 1000, nil
 }
 
-func (p *Parser) parseExpireTimeMs() (uint64, error) {
+func (p *Parser) parseExpireTimeMs() (int64, error) {
 	b, err := p.r.ReadFixedBytes(8)
 	if err != nil {
 		return 0, nil
 	}
 	expireAt := binary.LittleEndian.Uint64(b)
-	return expireAt, nil
+	return int64(expireAt), nil
 }
 
-func (p *Parser) parseEntryWithValueType(valueType byte, expireAt uint64) (*RedisRdbEvent, error) {
-	// TODO expires?
+func (p *Parser) parseKey() (string, error) {
+	return p.r.GetLengthString()
+}
 
-	key, err := p.r.GetLengthString()
-	if err != nil {
-		return nil, err
+func (p *Parser) parseEntryWithValueType(valueType byte, key string, DbId int, expireAt int64) (*RedisRdbEvent, error) {
+	redisKey := RedisKey{
+		DbId:     DbId,
+		Key:      key,
+		expireAt: expireAt,
 	}
 
 	switch valueType {
 	case rdbTypeString:
-		event, err := parseString(key, p.r)
+		event, err := parseString(redisKey, p.r)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeStringObject, Event: event}, nil
 	case rdbTypeList, rdbTypeZipList, rdbTypeListQuickList, rdbTypeListQuickList2:
-		event, err := parseList(key, p.r, valueType)
+		event, err := parseList(redisKey, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeListObject, Event: event}, nil
 	case rdbTypeSet, rdbTypeSetListPack, rdbTypeIntSet:
-		event, err := parseSet(key, p.r, valueType)
+		event, err := parseSet(redisKey, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeSetObject, Event: event}, nil
 	case rdbTypeZSetZipList, rdbTypeZSetListPack, rdbTypeZSet, rdbTypeZSet2:
-		event, err := parseZSet(key, p.r, valueType)
+		event, err := parseZSet(redisKey, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeZSetObject, Event: event}, nil
 	case rdbTypeHashZipList, rdbTypeHashListPack, rdbTypeHash:
-		event, err := parseHash(key, p.r, valueType)
+		event, err := parseHash(redisKey, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}
 		return &RedisRdbEvent{EventType: EventTypeHashObject, Event: event}, nil
 	case rdbTypeStreamListPacks, rdbTypeStreamListPacks2:
-		event, err := parseStream(key, p.r, valueType)
+		event, err := parseStream(redisKey, p.r, valueType)
 		if err != nil {
 			return nil, err
 		}

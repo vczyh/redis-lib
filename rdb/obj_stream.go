@@ -13,14 +13,15 @@ const (
 )
 
 type StreamObjectEvent struct {
-	Key     string
+	RedisKey
+
 	Entries []*StreamEntry
 	Groups  []*StreamConsumerGroup
 }
 
 func (e *StreamObjectEvent) Debug() {
 	fmt.Printf("=== StreamObjectEvent ===\n")
-	fmt.Printf("Key: %s\n", e.Key)
+	e.debugKey()
 
 	fmt.Printf("Entry size: %d\n", len(e.Entries))
 	fmt.Printf("Entries:\n")
@@ -89,8 +90,10 @@ type StreamId struct {
 	Seq uint64
 }
 
-func parseStream(key string, r *rdbReader, valueType byte) (*StreamObjectEvent, error) {
-	stream := &StreamObjectEvent{Key: key}
+func parseStream(key RedisKey, r *rdbReader, valueType byte) (*StreamObjectEvent, error) {
+	stream := &StreamObjectEvent{
+		RedisKey: key,
+	}
 	switch valueType {
 	case rdbTypeStreamListPacks, rdbTypeListQuickList2:
 		return parseStream0(r, valueType, stream)

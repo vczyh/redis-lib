@@ -5,7 +5,8 @@ import (
 )
 
 type HashObjectEvent struct {
-	Key    string
+	RedisKey
+
 	Fields []HashField
 }
 
@@ -16,7 +17,7 @@ type HashField struct {
 
 func (e *HashObjectEvent) Debug() {
 	fmt.Printf("=== HashObjectEvent ===\n")
-	fmt.Printf("Key: %s\n", e.Key)
+	e.debugKey()
 	fmt.Printf("Size: %d\n", len(e.Fields))
 	fmt.Printf("Fields:\n")
 	for i := range e.Fields {
@@ -26,8 +27,10 @@ func (e *HashObjectEvent) Debug() {
 	fmt.Printf("\n")
 }
 
-func parseHash(key string, r *rdbReader, valueType byte) (*HashObjectEvent, error) {
-	h := &HashObjectEvent{Key: key}
+func parseHash(key RedisKey, r *rdbReader, valueType byte) (*HashObjectEvent, error) {
+	h := &HashObjectEvent{
+		RedisKey: key,
+	}
 	switch valueType {
 	case rdbTypeHashZipList:
 		return parseHashInZipList(r, h)

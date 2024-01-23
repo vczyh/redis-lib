@@ -4,42 +4,26 @@ import (
 	"fmt"
 )
 
-const (
-	zipStrMask = 0xc0
-	zipStr06B  = 0 << 6
-	zipStr14B  = 1 << 6
-	zipStr32B  = 2 << 6
-
-	zipIntMask    = 0x30
-	zipInt8B      = 0xfe
-	zipInt16B     = 0xc0 | 0<<4
-	zipInt32B     = 0xc0 | 1<<4
-	zipInt64B     = 0xc0 | 2<<4
-	zipInt24B     = 0xc0 | 3<<4
-	zipIntImmMask = 0x0f
-	zipIntImmMin  = 0xf1
-	zipIntImmMax  = 0xfd
-)
-
 type ListObjectEvent struct {
-	Key     string
-	Members []string
+	RedisKey
+
+	Elements []string
 }
 
 func (e *ListObjectEvent) Debug() {
 	fmt.Printf("=== ListObjectEvent ===\n")
-	fmt.Printf("Key: %s\n", e.Key)
-	fmt.Printf("Size: %d\n", len(e.Members))
-	fmt.Printf("Members:\n")
-	for _, member := range e.Members {
-		fmt.Printf("\t%s\n", member)
+	e.debugKey()
+	fmt.Printf("Size: %d\n", len(e.Elements))
+	fmt.Printf("Elements:\n")
+	for _, ele := range e.Elements {
+		fmt.Printf("\t%s\n", ele)
 	}
 	fmt.Printf("\n")
 }
 
-func parseList(key string, r *rdbReader, valueType byte) (*ListObjectEvent, error) {
+func parseList(key RedisKey, r *rdbReader, valueType byte) (*ListObjectEvent, error) {
 	list := &ListObjectEvent{
-		Key: key,
+		RedisKey: key,
 	}
 	switch valueType {
 	case rdbTypeList:
@@ -70,7 +54,7 @@ func parseList0(r *rdbReader, list *ListObjectEvent) (*ListObjectEvent, error) {
 		}
 		members[i] = item
 	}
-	list.Members = members
+	list.Elements = members
 	return list, nil
 }
 
@@ -79,7 +63,7 @@ func parseListInZipList(r *rdbReader, list *ListObjectEvent) (*ListObjectEvent, 
 	if err != nil {
 		return nil, err
 	}
-	list.Members = zipList
+	list.Elements = zipList
 	return list, nil
 }
 
@@ -96,7 +80,7 @@ func parseListInQuickList(r *rdbReader, list *ListObjectEvent) (*ListObjectEvent
 		}
 		members = append(members, zipList...)
 	}
-	list.Members = members
+	list.Elements = members
 	return list, nil
 }
 
@@ -117,13 +101,13 @@ func parseListInQuickList2(r *rdbReader, list *ListObjectEvent) (*ListObjectEven
 			if err != nil {
 				return nil, err
 			}
-			list.Members = append(list.Members, member)
+			list.Elements = append(list.Elements, member)
 		case 2:
 			members, err := parseListPack(r)
 			if err != nil {
 				return nil, err
 			}
-			list.Members = append(list.Members, members...)
+			list.Elements = append(list.Elements, members...)
 		default:
 			return nil, fmt.Errorf("quicklist integrity check failed, unsupported listpack container: %d", container)
 		}

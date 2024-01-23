@@ -16,7 +16,7 @@ func TestParseString(t *testing.T) {
 	}
 	assert.Equal(t, "key_string", key)
 
-	e, err := parseString(key, r)
+	e, err := parseString(RedisKey{}, r)
 	if err != nil {
 		t.Fatal(err)
 	}

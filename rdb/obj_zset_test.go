@@ -20,7 +20,7 @@ func TestParseZSetWithListPack(t *testing.T) {
 	}
 	assert.Equal(t, "key_zset", key)
 
-	e, err := parseZSet(key, r, rdbTypeZSetListPack)
+	e, err := parseZSet(RedisKey{}, r, rdbTypeZSetListPack)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -46,7 +46,7 @@ func TestParseZSetWithZSet2(t *testing.T) {
 	}
 	assert.Equal(t, "key_zset", key)
 
-	e, err := parseZSet(key, r, rdbTypeZSet2)
+	e, err := parseZSet(RedisKey{}, r, rdbTypeZSet2)
 	if err != nil {
 		t.Fatal(err)
 	}

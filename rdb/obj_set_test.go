@@ -18,7 +18,7 @@ func TestParseSetWithListPack(t *testing.T) {
 	}
 	assert.Equal(t, "key_set", key)
 
-	e, err := parseSet(key, r, rdbTypeSetListPack)
+	e, err := parseSet(RedisKey{}, r, rdbTypeSetListPack)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -37,7 +37,7 @@ func TestParseSetWithIntSet(t *testing.T) {
 	}
 	assert.Equal(t, "key_set", key)
 
-	e, err := parseSet(key, r, rdbTypeIntSet)
+	e, err := parseSet(RedisKey{}, r, rdbTypeIntSet)
 	if err != nil {
 		t.Fatal(err)
 	}

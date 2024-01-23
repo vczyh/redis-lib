@@ -6,7 +6,8 @@ import (
 )
 
 type ZSetObjectEvent struct {
-	Key     string
+	RedisKey
+
 	Members []ZSetMember
 }
 
@@ -17,7 +18,7 @@ type ZSetMember struct {
 
 func (e *ZSetObjectEvent) Debug() {
 	fmt.Printf("=== ZSetObjectEvent ===\n")
-	fmt.Printf("Key: %s\n", e.Key)
+	e.debugKey()
 	fmt.Printf("Size: %d\n", len(e.Members))
 	fmt.Printf("Members:\n")
 	for _, member := range e.Members {
@@ -26,8 +27,10 @@ func (e *ZSetObjectEvent) Debug() {
 	fmt.Printf("\n")
 }
 
-func parseZSet(key string, r *rdbReader, valueType byte) (*ZSetObjectEvent, error) {
-	zSet := &ZSetObjectEvent{Key: key}
+func parseZSet(key RedisKey, r *rdbReader, valueType byte) (*ZSetObjectEvent, error) {
+	zSet := &ZSetObjectEvent{
+		RedisKey: key,
+	}
 	switch valueType {
 	case rdbTypeZSetZipList:
 		return parseZSetInZipList(r, zSet)

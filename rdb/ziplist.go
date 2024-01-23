@@ -7,6 +7,23 @@ import (
 	"strconv"
 )
 
+const (
+	zipStrMask = 0xc0
+	zipStr06B  = 0 << 6
+	zipStr14B  = 1 << 6
+	zipStr32B  = 2 << 6
+
+	zipIntMask    = 0x30
+	zipInt8B      = 0xfe
+	zipInt16B     = 0xc0 | 0<<4
+	zipInt32B     = 0xc0 | 1<<4
+	zipInt64B     = 0xc0 | 2<<4
+	zipInt24B     = 0xc0 | 3<<4
+	zipIntImmMask = 0x0f
+	zipIntImmMin  = 0xf1
+	zipIntImmMax  = 0xfd
+)
+
 func parseZipList(r *rdbReader) ([]string, error) {
 	zipBytes, err := r.GetLengthBytes()
 	if err != nil {

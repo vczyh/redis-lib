@@ -3,24 +3,25 @@ package rdb
 import "fmt"
 
 type StringObjectEvent struct {
-	Key   string
+	RedisKey
+
 	Value string
 }
 
-func parseString(key string, r *rdbReader) (*StringObjectEvent, error) {
+func parseString(key RedisKey, r *rdbReader) (*StringObjectEvent, error) {
 	value, err := r.GetLengthString()
 	if err != nil {
 		return nil, err
 	}
 	return &StringObjectEvent{
-		Key:   key,
-		Value: value,
+		RedisKey: key,
+		Value:    value,
 	}, nil
 }
 
 func (e *StringObjectEvent) Debug() {
 	fmt.Printf("=== StringObjectEvent ===\n")
-	fmt.Printf("Key: %s\n", e.Key)
+	e.debugKey()
 	fmt.Printf("Value: %s\n", e.Value)
 	fmt.Printf("\n")
 }

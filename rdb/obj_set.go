@@ -6,13 +6,14 @@ import (
 )
 
 type SetObjectEvent struct {
-	Key     string
+	RedisKey
+
 	Members []string
 }
 
 func (e *SetObjectEvent) Debug() {
 	fmt.Printf("=== SetObjectEvent ===\n")
-	fmt.Printf("Key: %s\n", e.Key)
+	e.debugKey()
 	fmt.Printf("Size: %d\n", len(e.Members))
 	fmt.Printf("Members:\n")
 	for _, member := range e.Members {
@@ -21,8 +22,10 @@ func (e *SetObjectEvent) Debug() {
 	fmt.Printf("\n")
 }
 
-func parseSet(key string, r *rdbReader, valueType byte) (*SetObjectEvent, error) {
-	set := &SetObjectEvent{Key: key}
+func parseSet(key RedisKey, r *rdbReader, valueType byte) (*SetObjectEvent, error) {
+	set := &SetObjectEvent{
+		RedisKey: key,
+	}
 	switch valueType {
 	case rdbTypeSet:
 		return parseSet0(r, set)

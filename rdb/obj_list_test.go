@@ -18,10 +18,10 @@ func TestParseListWithListQuickList2(t *testing.T) {
 	}
 	assert.Equal(t, "key_list", key)
 
-	e, err := parseList(key, r, rdbTypeListQuickList2)
+	e, err := parseList(RedisKey{}, r, rdbTypeListQuickList2)
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, "bar", e.Members[0])
-	assert.Equal(t, "foo", e.Members[1])
+	assert.Equal(t, "bar", e.Elements[0])
+	assert.Equal(t, "foo", e.Elements[1])
 }

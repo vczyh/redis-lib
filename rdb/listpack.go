@@ -1,7 +1,6 @@
 package rdb
 
 import (
-	"bytes"
 	"fmt"
 	"math"
 	"strconv"
@@ -37,22 +36,24 @@ const (
 )
 
 func parseListPack(r *rdbReader) ([]string, error) {
-	listPackBytes, err := r.GetLengthBytes()
+	_, err := r.GetLengthInt()
 	if err != nil {
 		return nil, err
 	}
-	r = newRdbReader(bytes.NewReader(listPackBytes))
 
 	// Total length
 	_, err = r.GetLUint32()
 	if err != nil {
 		return nil, err
 	}
+
 	// Element size
+	// TODO exceed 65535
 	size, err := r.GetLUint16()
 	if err != nil {
 		return nil, err
 	}
+
 	members := make([]string, size)
 	for i := 0; i < int(size); i++ {
 		entry, err := parseListPackEntry(r)
@@ -69,6 +70,7 @@ func parseListPack(r *rdbReader) ([]string, error) {
 	if eof != 0xff {
 		return nil, fmt.Errorf("listpack must end of 0xff: %x", eof)
 	}
+
 	return members, nil
 }
 
