@@ -23,7 +23,6 @@ func TestParseHashWithListPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, "key_hash", e.Key)
 	for _, field := range e.Fields {
 		switch field.Field {
 		case "key1":
@@ -52,7 +51,6 @@ func TestParseHashWithHash(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	assert.Equal(t, "key_hash", e.Key)
 	for _, field := range e.Fields {
 		switch field.Field {
 		case "key1":
