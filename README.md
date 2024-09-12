@@ -19,38 +19,25 @@ go get github.com/vczyh/redis-lib
 ## Creating Connection
 
 ```go  
-c, err := client.NewClient(&client.Config{  
+c, _ := client.NewClient(&client.Config{  
     Host:     "127.0.0.1",  
     Port:     26379,  
     Username: "",  
     Password: "123",  
 })  
-if err != nil {  
-    panic(err)  
-}  
-  
-if err := c.Auth(); err != nil {  
-    panic(err)  
-}  
-  
-if err = c.Ping(); err != nil {  
-    panic(err)  
-}
+
+_ = c.Auth()
+
+_ = c.Ping()
 ```  
 
 ## Parsing RDB
 
 ```go  
-p, err := rdb.NewParser("/tmp/rdb_test.rdb")  
-if err != nil {  
-    panic(err)  
-}  
-  
-s, err := p.Parse()  
-if err != nil {  
-    panic(err)  
-}  
-  
+p, _ := rdb.NewParser("/tmp/rdb_test.rdb")  
+
+s, _ := p.Parse()  
+
 for s.HasNext() {  
     e := s.Next()  
   
@@ -64,9 +51,7 @@ for s.HasNext() {
     }  
 }  
   
-if err := s.Err(); err != nil {  
-    panic(err)  
-}
+_ = s.Err()
 
 === VersionEvent ===
 9
@@ -90,7 +75,7 @@ Members:
 ## Faking Replica
 
 ```go  
-r, err := replica.NewReplica(&replica.Config{  
+r, _ := replica.NewReplica(&replica.Config{  
     MasterIP:            "127.0.0.1",  
     MasterPort:          26379,  
     MasterUser:          "",  
@@ -99,13 +84,7 @@ r, err := replica.NewReplica(&replica.Config{
     RdbWriter:           os.Stdout,  
     AofWriter:           os.Stdout,  
 })  
-if err != nil {  
-    panic(err)  
-}  
-  
-if err := r.SyncWithMaster(); err != nil {  
-    panic(err)  
-}
+_ = r.SyncWithMaster()
 ```
 
 synchronize data and parse RDB:
@@ -113,7 +92,7 @@ synchronize data and parse RDB:
 ```go
 rdbReader, rdbWriter := io.Pipe()  
   
-r, err := replica.NewReplica(&replica.Config{  
+r, _ := replica.NewReplica(&replica.Config{  
     MasterIP:       "127.0.0.1",  
     MasterPort:     26379,  
     MasterUser:     "",  
@@ -121,19 +100,12 @@ r, err := replica.NewReplica(&replica.Config{
     RdbWriter:      rdbWriter,  
     AofWriter:      os.Stdout,  
 })  
-if err != nil {  
-    panic(err)  
-}  
   
 go func() {  
-    if err := parseRdb(rdbReader); err != nil {  
-       panic(err)  
-    }  
+    _ = parseRdb(rdbReader)
 }()  
   
-if err = r.SyncWithMaster(); err != nil {  
-    panic(err)  
-}
+_ = r.SyncWithMaster()
 
 func parseRdb(r io.Reader) error {  
     p, err := rdb.NewReaderParser(r)  
